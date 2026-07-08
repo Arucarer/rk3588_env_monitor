@@ -38,8 +38,8 @@
 #define GPIO_RAIN_PIN               0                           // 雨滴传感器引脚
 
 /* #2.I2C 配置 */
-#define I2C_BME280_ADDR             0x76
-#define I2C_TIMEOUT_MS              1000
+#define I2C_BME280_ADDR             0x76                        // BME280传感器地址
+#define I2C_TIMEOUT_MS              1000                        // I2C超时时间
 
 /* #3.UART 配置*/
 #define UART_BAUD_RATE              9600                        // UART波特率
@@ -48,6 +48,7 @@
 #define UART_PARITY                 'N'                         // 校验位
 #define UART_BUFFER_SIZE            256                         // 缓存区大小
 
+
 /* #4.MQTT 配置 */
 #define MQTT_HOST                   "127.0.0.1"                 // MQTT服务地址
 #define MQTT_PORT                   1883                        // MQTT服务端口
@@ -55,13 +56,10 @@
 #define MQTT_PUB_TOPIC              "rk3588/env_monitor/data"   // MQTT发布主题
 #define MQTT_SUB_TOPIC              "rk3588/env_monitor/cmd"    // MQTT订阅主题
 
-/* #4.SQLite 配置 */
-
+/* #5.SQLite 配置 */
 #define SQLITE_DB_PATH              "./data/env_monitor.db"     // SQLite数据库文件路径
 
-/* #5.系统配置*/
-
+/* #6.系统配置*/
 #define SAMPLE_PERIOD_MS        1000
-
 
 #endif 

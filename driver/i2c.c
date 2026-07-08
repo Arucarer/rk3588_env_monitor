@@ -57,7 +57,7 @@
 
  int i2c_write_reg(int fd, uint8_t reg, const uint8_t *data, size_t len)
  {
-    uint8_t buf[len + 1];
+    uint8_t buf[len + 1];//创建一个缓冲区，用于存储寄存器地址和数据
     int ret = 0;
     
     if (fd < 0 || data == NULL || len == 0) {
@@ -71,8 +71,6 @@
         return -1;
     }
     return 0;
-
-
  }
 
  void i2c_close(int fd)
