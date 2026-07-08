@@ -18,6 +18,10 @@
  * 4. 为土壤湿度、雨滴等模拟量传感器提供统一访问接口。
  ******************************************************************************/
  #include "adc.h"
+ #include <stdio.h>
+ #include <stdlib.h>  // atoi
+ #include <unistd.h> //open\close
+ #include <fcntl.h> // O_RDONLY
 
  int adc_open(const char *dev_path)
  {
@@ -53,11 +57,34 @@
     return 0;
  }
 
- int adc_read_voltage(const char *raw_path,
-    const char *scale_path,
-    float *voltage);// 读取 ADC 电压值
+ int adc_read_voltage(const char *raw_path, const char *scale_path, float *voltage)
+ {
+    int raw;
+    int ret;
+    float scale;
+    FILE *fp;
 
-int adc_raw_to_percent(int raw,
-      int dry_raw,
-      int wet_raw);// 将 ADC 原始采样值转换为百分比
+    ret = adc_read_raw(raw_path, &raw);
+    if (ret < 0)
+        return -1;
 
+    fp = fopen(scale_path, "r");// fopen是文件打开函数
+    if (fp == NULL)
+        return -1;
+
+    ret = fscanf(fp, "%f", &scale);// 读取 IIO sysfs 节点中的数据
+    fclose(fp);
+    if (ret != 1)
+        return -1;
+
+    *voltage = raw * scale;
+    return 0;
+ }
+ 
+
+int adc_raw_to_percent(int raw, int dry_raw, int wet_raw)
+{
+    int percent;
+    percent = (raw - dry_raw) * 100 / (wet_raw - dry_raw);
+    return percent;
+}
