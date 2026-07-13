@@ -82,9 +82,22 @@
  }
  
 
-int adc_raw_to_percent(int raw, int dry_raw, int wet_raw)
-{
-    int percent;
-    percent = (raw - dry_raw) * 100 / (wet_raw - dry_raw);
-    return percent;
-}
+ float adc_raw_to_percent(int raw, int dry_raw, int wet_raw)
+ {
+     float percent;
+ 
+     if (dry_raw == wet_raw) {
+         return -1.0f;
+     }
+ 
+     percent = (float)(raw - dry_raw) * 100.0f /
+               (float)(wet_raw - dry_raw);
+ 
+     if (percent < 0.0f) {
+         percent = 0.0f;
+     } else if (percent > 100.0f) {
+         percent = 100.0f;
+     }
+ 
+     return percent;
+ }

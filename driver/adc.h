@@ -30,8 +30,6 @@
     const char *scale_path,
     float *voltage);// 读取 ADC 电压值
 
-int adc_raw_to_percent(int raw,
-      int dry_raw,
-      int wet_raw);// 将 ADC 原始采样值转换为百分比
+float adc_raw_to_percent(int raw, int dry_raw, int wet_raw);
  
  #endif

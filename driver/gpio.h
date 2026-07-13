@@ -24,6 +24,11 @@
  #ifndef __GPIO_H__
  #define __GPIO_H__
  
+ #include <stdint.h>
+ 
+ #define GPIO_INPUT   "in"
+ #define GPIO_OUTPUT  "out"
+
  int gpio_export(int gpio);
  int gpio_set_direction(int gpio, int direction);
  int gpio_read_value(int gpio, int *value);

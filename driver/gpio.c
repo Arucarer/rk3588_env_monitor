@@ -27,16 +27,29 @@
 #include <fcntl.h>
 
 
- int gpio_export(int gpio)
+ int gpio_export(int gpio)//导出gpio
  {
-    char path[64];
     int fd;
-    fd = open(path, O_WRONLY);//O_WRONLY是只写
+    int ret;
+    int len;
+    char path[64];
+    char buf[16];
+
     sprintf(path, "/sys/class/gpio/export");
-    ret = write(fd, &gpio, sizeof(gpio));//写入gpio
+
+    fd = open(path, O_WRONLY);
+    if (fd < 0)
+        return -1;
+
+    len = sprintf(buf, "%d", gpio);//sprintf()函数将格式化的数据写入字符串buf中
+    ret = write(fd, buf, len);//向 GPIO 的 export 文件写入 1 个字节
     close(fd);
-    return ret;
- }
+
+    if (ret != len)
+        return -1;
+
+    return 0;
+}
  int gpio_set_direction(int gpio, int direction)
  {
     int ret;
@@ -48,30 +61,78 @@
     {
         return -1;
     }
-    if (direction == GPIO_IN)//输入
-    {
-        ret = write(fd, "in", 2);//写入in
-    }
+    if (direction == GPIO_IN)
+        ret = write(fd, "in", 2);
     else
-    {
         ret = write(fd, "out", 3);
-    }
+    close(fd);
     if (ret < 0)
     {
         return -1;
     }
-    close(fd);
-    return ret;
+    return 0;
  }
- int gpio_read_value(int gpio, int *value)
+ int gpio_read_value(int gpio, int *value)//读取gpio电平
  {
+    int ret;
+    int fd;
+    char ch;
+    char path[64];
 
+    if (value == NULL)
+        return -1;
+    sprintf(path, "/sys/class/gpio/gpio%d/value", gpio);
+
+    fd = open(path, O_RDONLY);
+    if (fd < 0)
+        return -1;
+
+    ret = read(fd, &ch, 1);
+    close(fd);
+
+    if (ret != 1)
+        return -1;
+
+    *value = ch - '0';
+
+    return 0;
  }
  int gpio_write_value(int gpio, int value)
  {
+    int ret;
+    int fd;
+    char ch;
+    char path[64];
 
+    sprintf(path, "/sys/class/gpio/gpio%d/value", gpio);
+
+    fd = open(path, O_WRONLY);
+    if (fd < 0)
+        return -1;
+    ch = value ? '1' : '0';//是判断写入高电平还是低电平
+    ret = write(fd, &ch, 1);//向 GPIO 的 value 文件写入 1 个字节
+    close(fd);
+    if (ret != 1)
+        return -1;
+
+    return 0;
  }
  int gpio_unexport(int gpio)
  {
-
+     int fd;
+     int ret;
+     int len;
+     char path[64];
+     char buf[16];
+     sprintf(path, "/sys/class/gpio/unexport");//创建 unexport 路径
+     fd = open(path, O_WRONLY);
+     if (fd < 0)
+         return -1;
+     len = sprintf(buf, "%d", gpio);//sprintf()函数将格式化的数据写入字符串buf中
+     ret = write(fd, buf, len);//向 GPIO 的 unexport 文件写入 1 个字节
+     close(fd);
+     if (ret != len)
+         return -1;
+ 
+     return 0;
  }
