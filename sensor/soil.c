@@ -22,6 +22,55 @@
 #include <stddef.h>// NULL
 #include <fcntl.h>//open
 
+static int soil_adc_fd = -1;   /* 土壤传感器 ADC 文件描述符 */
+int soil_init(void)
+{
+    int ret;
+    ret = adc_open(SOIL_ADC_AO_PATH);
+    if (ret < 0) {
+        perror("adc_open");
+        return ret;
+    }
+    return 0;    
+}
+ 
+int soil_read_adc(uint16_t *adc_value)
+{
+    int ret;
+    if(adc_value == NULL)
+    {
+        return -1;
+    }
+    if (soil_adc_fd < 0) {
+        return -1;
+    }
+    ret = adc_read_raw(SOIL_ADC_AO_PATH, adc_value);
+    if (ret < 0) {
+        perror("adc_read_raw");
+        return ret;
+    }
+    return 0;
+}
 
+int soil_get_moisture(uint16_t adc_value, float *moisture)
+{
+    float percent;
+    percent = adc_raw_to_percent(adc_value, SOIL_ADC_DRY_VALUE, SOIL_ADC_WET_VALUE);
+    if(percent < 0.0f)
+    {
+        return -1;
+    }
+    *moisture = percent;
+    return 0;
+}
+
+void soil_deinit(void)
+{
+    if(soil_adc_fd >= 0) {
+        close(soil_adc_fd);
+        soil_adc_fd = -1;
+    }
+    return 0;
+}
 
 

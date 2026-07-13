@@ -60,7 +60,7 @@
 
  /* 雨滴传感器 AO 对应的 ADC raw 文件路径 */
  #define RAIN_ADC_AO_PATH    "/sys/bus/iio/devices/iio:device0/in_voltage4_raw"
-
+ /* 土壤传感器 AO 对应的 ADC raw 文件路径 */
  #define SOIL_ADC_AO_PIN        "/sys/bus/iio/devices/iio:device0/in_voltageX_raw"
 
  /* RS485收发方向控制引脚

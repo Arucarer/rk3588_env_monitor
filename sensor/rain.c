@@ -19,7 +19,7 @@
 #include "config.h"
 
 #include <stdio.h>
-#include <stddef.h>
+#include <stddef.h>// NULL
 #include <unistd.h>
 
 static int rain_adc_fd = -1;   /* 雨滴传感器 ADC 文件描述符 */
@@ -55,10 +55,10 @@ int rain_read_adc(uint16_t *adc_value)
     if (adc_value == NULL) {
         return -1;
     }
-
     if (rain_adc_fd < 0) {
         return -1;
     }
+    
     ret = adc_read_raw(rain_adc_fd, adc_value);
     if (ret < 0) {
         perror("adc_read_raw");
