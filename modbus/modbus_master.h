@@ -13,9 +13,9 @@
  #include <stdint.h>
  
  /* 常用功能码 */
- #define MODBUS_FUNC_READ_HOLDING_REGISTERS    0x03
- #define MODBUS_FUNC_READ_INPUT_REGISTERS      0x04
- #define MODBUS_FUNC_WRITE_SINGLE_REGISTER     0x06
+ #define MODBUS_FUNC_READ_HOLDING_REGISTERS    0x03 //读取保持寄存器
+ #define MODBUS_FUNC_READ_INPUT_REGISTERS      0x04 //读取输入寄存器
+ #define MODBUS_FUNC_WRITE_SINGLE_REGISTER     0x06 //写单个保持寄存器
  
  /* 返回值 */
  #define MODBUS_OK                              0       //成功
@@ -30,10 +30,10 @@
  
  /*读取保持寄存器*/
  int modbus_master_read_holding_registers(int fd,
-                                          uint8_t slave_addr,
-                                          uint16_t start_addr,
-                                          uint16_t reg_count,
-                                          uint16_t *reg_data);
+                                          uint8_t slave_addr,//从站地址
+                                          uint16_t start_addr,//寄存器起始地址
+                                          uint16_t reg_count,//寄存器个数
+                                          uint16_t *reg_data);//寄存器数据
  
  /*读取输入寄存器*/
  int modbus_master_read_input_registers(int fd,
@@ -47,5 +47,5 @@
                                          uint8_t slave_addr,
                                          uint16_t reg_addr,
                                          uint16_t reg_value);
- 
+
  #endif
