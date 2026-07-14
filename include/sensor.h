@@ -28,7 +28,9 @@
 
 typedef struct
 {
+    float bme_temperature;
     float temperature;          // 温度(℃)
+    float bme_humidity;
     float humidity;             // 湿度(%RH)
     /* 气压 */
     float pressure;             // 气压(hPa)
@@ -36,6 +38,7 @@ typedef struct
     float soil_humidity;        // 土壤湿度(%)
     /* 降雨 */
     float rainfall;             // 降雨量(mm)
+    bool rain_detected
     /* PM */
     float pm25;                 // PM2.5(ug/m³)
     float pm10;                 // PM10(ug/m³)
@@ -44,7 +47,7 @@ typedef struct
     /* 数据状态 */
     bool valid;                 // 数据是否有效
     /* 时间戳 */
-    uint64_t timestamp;         // 采集时间(ms)
+    uint64_t timestamp;         // 采集时间(s)
 }sensor_data_t;
 
 #endif /* __SENSOR_H__ */
