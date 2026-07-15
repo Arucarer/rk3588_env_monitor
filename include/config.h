@@ -160,17 +160,24 @@
   * #7 MQTT配置
   ******************************************************************************/
  
- #define MQTT_HOST                      "127.0.0.1"
- #define MQTT_PORT                      1883
- #define MQTT_CLIENT_ID                 "rk3588_env_monitor_001"
- #define MQTT_PUB_TOPIC                 "rk3588/env_monitor/data"
- #define MQTT_SUB_TOPIC                 "rk3588/env_monitor/cmd"
- 
- /* MQTT连接参数 */
- #define MQTT_KEEPALIVE_SEC             60
- #define MQTT_QOS                       1
- #define MQTT_RETAIN                    0
- #define MQTT_RECONNECT_INTERVAL_SEC    5
+
+#define MQTT_BROKER_ADDRESS        "tcp://127.0.0.1:1883"  /* MQTT Broker 地址 */
+
+#define MQTT_CLIENT_ID             "rk3588_env_monitor_001"/* MQTT 客户端唯一标识 */
+
+#define MQTT_PUBLISH_TOPIC         "rk3588/env_monitor/data"/* 数据发布主题 */
+
+#define MQTT_SUBSCRIBE_TOPIC       "rk3588/env_monitor/cmd"/* 命令订阅主题，当前最小版本暂时不用 */
+
+/* MQTT 服务质量等级 */
+#define MQTT_QOS                   1
+
+#define MQTT_TIMEOUT_MS            5000L /* 消息发送和断开连接超时时间，单位：毫秒 */
+
+#define MQTT_KEEP_ALIVE_INTERVAL   20 /* MQTT 心跳间隔，单位：秒 */
+
+#define MQTT_CLEAN_SESSION         1 /* 是否使用清洁会话 */
+
  
  
  /******************************************************************************

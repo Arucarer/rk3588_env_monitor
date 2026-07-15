@@ -201,16 +201,18 @@ rk3588_env_monitor/
 ## 当前开发进度
 
 * [x] 项目框架搭建
-* [ ] Linux 硬件访问模块（I2C / UART / ADC / GPIO）
-* [ ] BME280 传感器驱动
-* [ ] 底层驱动开发
-* [ ] Modbus RTU
-* [ ] Sensor Manager
+* [x] Linux 硬件访问模块（I2C / UART / ADC / GPIO）
+* [x] BME280 传感器驱动
+* [x] RS485 SHT30 温湿度传感器
+* [x] Modbus RTU
+* [x] Sensor Manager
+* [ ] 系统主程序联调
 * [ ] Qt 上位机
 * [ ] SQLite
 * [ ] MQTT
 * [ ] OTA
 * [ ] 系统部署
+* [ ] Linux 内核驱动开发
 
 ---
 

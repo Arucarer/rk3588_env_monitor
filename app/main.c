@@ -41,7 +41,6 @@ int main(int argc, char *argv[])
             printf("传感器数据采集失败, ret=%d\n", ret);
             continue;
         }
-
         sleep(1);
     }
     sensor_manager_deinit();
