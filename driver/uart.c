@@ -25,7 +25,7 @@
 
 int uart_open(const char *dev_path)
 {
-    int fd = open(dev_path, O_RDWR | O_NOCTTY | O_NDELAY);//O_RDWR | O_NOCTTY | O_NDELAY是串口设备打开方式
+    int fd = open(dev_path, O_RDWR | O_NOCTTY | O_NDELAY);//O_RDWR | O_NOCTTY | O_NDELAY是只读、只写、非阻塞模式打开串口设备
     if (fd < 0) {
         perror("open uart device failed");
         return -1;

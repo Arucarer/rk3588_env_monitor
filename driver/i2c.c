@@ -18,7 +18,7 @@
  
  int i2c_open(const char *dev_path)
  {
-    int ret = open(dev_path, O_RDWR);
+    int ret = open(dev_path, O_RDWR);//O_RDWR表示读写权限
     if(ret < 0)
     {
         perror("open i2c device failed");
@@ -29,7 +29,7 @@
  
  int i2c_set_addr(int fd, uint8_t addr)
  {
-    int ret = ioctl(fd, I2C_SLAVE, addr);//I2C_SLAVE是一个宏定义，表示设置I2C从设备地址的操作
+    int ret = ioctl(fd, I2C_SLAVE, addr);         //I2C_SLAVE是一个宏定义，表示设置I2C从设备地址的操作
     if(ret < 0)
     {
         perror("set i2c slave address failed");

@@ -34,20 +34,15 @@
     int len;
     char path[64];
     char buf[16];
-
     sprintf(path, "/sys/class/gpio/export");
-
     fd = open(path, O_WRONLY);
     if (fd < 0)
         return -1;
-
     len = sprintf(buf, "%d", gpio);//sprintf()函数将格式化的数据写入字符串buf中
     ret = write(fd, buf, len);//向 GPIO 的 export 文件写入 1 个字节
     close(fd);
-
     if (ret != len)
         return -1;
-
     return 0;
 }
  int gpio_set_direction(int gpio, int direction)

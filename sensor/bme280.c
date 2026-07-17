@@ -28,13 +28,10 @@
 
 #include "bme280.h"
 #include "i2c.h"
-#include "delay.h"
+
 
 #include <stdio.h>
-#include <stdlib.h>
 #include <stdint.h>
-#include <string.h>
-#include <unistd.h>
 
 #define BME280_I2C_ADDR        0x76 // BME280 I2C 地址
 #define BME280_CHIP_ID         0x60 // BME280 芯片ID
@@ -56,7 +53,44 @@
 
 #define BME280_CONFIG_DEFAULT  0x00
 
-int bme280_fd = -1;
+
+typedef struct
+{
+    /* Temperature */
+    uint16_t dig_T1;
+    int16_t  dig_T2;
+    int16_t  dig_T3;
+
+
+    /* Pressure */
+    uint16_t dig_P1;
+    int16_t  dig_P2;
+    int16_t  dig_P3;
+    int16_t  dig_P4;
+    int16_t  dig_P5;
+    int16_t  dig_P6;
+    int16_t  dig_P7;
+    int16_t  dig_P8;
+    int16_t  dig_P9;
+
+
+    /* Humidity */
+    uint8_t  dig_H1;
+    int16_t  dig_H2;
+    uint8_t  dig_H3;
+    int16_t  dig_H4;
+    int16_t  dig_H5;
+    int8_t   dig_H6;
+
+}bme280_calib_data_t;
+
+static int bme280_fd = -1;
+static bme280_calib_data_t calib;
+static int32_t t_fine;
+
+static int bme280_read_id(uint8_t *id);
+static int bme280_read_calibration(void);
+static int bme280_config(void);
 
 static float bme280_compensate_temperature(int32_t temp_raw);
 static float bme280_compensate_pressure(int32_t press_raw);
@@ -100,6 +134,20 @@ int bme280_init(void)
         bme280_fd = -1;
         return -1;
     }
+
+    /* 4. 读取校准参数*/
+    ret = bme280_read_calibration();
+
+    if(ret < 0)
+    {
+        printf("BME280读取校准参数失败！\n");
+
+        i2c_close(bme280_fd);
+        bme280_fd = -1;
+
+        return -1;
+    }
+
     /* 4. 配置 BME280 工作模式、过采样、滤波 */
     ret = bme280_config();
     if(ret < 0)
@@ -112,7 +160,7 @@ int bme280_init(void)
     printf("BME280 init done.\n");
     return 0;
 }
-int bme280_read_id(uint8_t *id)
+static int bme280_read_id(uint8_t *id)
 {
     int ret;
     if(bme280_fd < 0)
@@ -134,7 +182,7 @@ int bme280_read_id(uint8_t *id)
     }
     return 0;
 }
-int bme280_config(void)
+static int bme280_config(void)
 {
     int ret;
     uint8_t data;
@@ -144,25 +192,30 @@ int bme280_config(void)
     ret = i2c_write_reg(bme280_fd, BME280_REG_CTRL_HUM, &data, 1);
     if (ret < 0)
     {
-        printf("BME280 配置湿度过采样失败！\n");
+        printf("BME280 配置湿度失败！\n");
         return -1;
     }
 
     /* 2. 配置温度过采样 */
-    data = BME280_OSRS_T_1;
+    data =
+        (BME280_OSRS_T_1 << 5)//这个值是温度的配置，0b11100000，111是温度的配置，00是待机时间，00是滤波系数，00是SPI模式
+        |
+        (BME280_OSRS_P_1 << 2)//这个值是压强配置，0b00000111，000是压强配置，01是待机时间，11是滤波系数，00是SPI模式
+        |
+        BME280_MODE_NORMAL;//这个值是工作模式，0b00000011，000是待机时间，11是滤波系数，11是SPI模式
     ret = i2c_write_reg(bme280_fd, BME280_REG_CTRL_MEAS, &data, 1);
     if (ret < 0)
     {
-        printf("BME280 配置温度过采样失败！\n");
+        printf("BME280 配置温压模式失败！\n");
         return -1;
     }
     
-    /* 3. 配置气压过采样 */
-    data = BME280_OSRS_P_1;
+    /* 3. 配置滤波和待机时间 */
+    data = BME280_CONFIG_DEFAULT;
     ret = i2c_write_reg(bme280_fd, BME280_REG_CONFIG, &data, 1);
     if (ret < 0)
     {
-        printf("BME280 配置气压过采样失败！\n");
+        printf("BME280 配置CONFIG失败！\n");
         return -1;
     }
 
@@ -219,24 +272,302 @@ void bme280_deinit(void)
     }
 }
 
-static float bme280_compensate_temperature(int32_t temp_raw)
-{ 
-    float ret;
-    ret = temp_raw / 16384.0 - 25.0;
-    return ret;
+static float bme280_compensate_temperature(int32_t adc_T)
+{
+    float var1;
+    float var2;
+
+
+    var1 = (((float)adc_T)/16384.0 -
+            ((float)calib.dig_T1)/1024.0)
+            *
+            ((float)calib.dig_T2);
+
+
+    var2 = ((((float)adc_T)/131072.0 -
+            ((float)calib.dig_T1)/8192.0)
+            *
+            (((float)adc_T)/131072.0 -
+            ((float)calib.dig_T1)/8192.0))
+            *
+            ((float)calib.dig_T3);
+
+
+    t_fine = (int32_t)(var1 + var2);
+
+
+    return ((float)t_fine) / 5120.0;
 }
 
-static float bme280_compensate_pressure(int32_t press_raw)
-{ 
-    float ret;
-    ret = press_raw / 1048576.0 - 1.0;
-    ret = ret * 25.0 / 16384.0;
-    return ret;
+static float bme280_compensate_pressure(int32_t adc_P)
+{
+    int64_t var1;
+    int64_t var2;
+    int64_t p;
+
+
+    var1 = ((int64_t)t_fine) - 128000;
+
+    var2 = var1 * var1 * calib.dig_P6;
+
+    var2 = var2 +
+        ((var1 * calib.dig_P5)<<17);
+
+    var2 = var2 +
+        (((int64_t)calib.dig_P4)<<35);
+
+
+    var1 = ((var1 * var1 * calib.dig_P3)>>8)
+          +
+          ((var1 * calib.dig_P2)<<12);
+
+
+    var1 =
+    (((((int64_t)1)<<47)+var1))
+    *
+    calib.dig_P1 >>33;
+
+
+    if(var1==0)
+        return 0;
+
+
+    p = 1048576-adc_P;
+
+
+    p = (((p<<31)-var2)*3125)/var1;
+
+
+    return (p/256.0)/100.0;
 }
-static float bme280_compensate_humidity(int32_t hum_raw)
-{ 
-    float ret;
-    ret = hum_raw / 16384.0 - 1.0;
-    ret = ret * 100.0 / 1024.0;
-    return ret;
+static float bme280_compensate_humidity(int32_t adc_H)
+{
+    int32_t v_x1_u32r;
+
+
+    v_x1_u32r = t_fine - 76800;
+
+
+    v_x1_u32r =
+        (((((adc_H << 14) -
+        (((int32_t)calib.dig_H4) << 20) -
+        (((int32_t)calib.dig_H5) * v_x1_u32r))
+        + 16384) >> 15)
+        *
+        (((((((v_x1_u32r *
+        ((int32_t)calib.dig_H6)) >> 10)
+        *
+        (((v_x1_u32r *
+        ((int32_t)calib.dig_H3)) >> 11)
+        + 32768)) >> 10)
+        + 2097152)
+        *
+        ((int32_t)calib.dig_H2)
+        + 8192) >> 14));
+
+
+    v_x1_u32r =
+        (v_x1_u32r -
+        (((((v_x1_u32r >> 15) *
+        (v_x1_u32r >> 15)) >> 7)
+        *
+        ((int32_t)calib.dig_H1)) >> 4));
+
+
+    if(v_x1_u32r < 0)
+        v_x1_u32r = 0;
+
+
+    if(v_x1_u32r > 419430400)
+        v_x1_u32r = 419430400;
+
+
+    return (float)(v_x1_u32r >> 12) / 1024.0;
+}
+
+static int bme280_read_calibration(void)
+{
+    int ret;
+
+    uint8_t calib_buf[26];
+    uint8_t hum_buf[7];
+
+
+    /*
+     * 1. 读取温度和压力校准参数
+     *
+     * 地址:
+     * 0x88 ~ 0xA1
+     *
+     * 共26字节
+     */
+    ret = i2c_read_reg(
+            bme280_fd,
+            0x88,
+            calib_buf,
+            26);
+
+    if(ret < 0)
+    {
+        printf("BME280读取温压校准参数失败！\n");
+        return -1;
+    }
+
+
+    /*
+     * 温度校准参数
+     */
+
+    calib.dig_T1 =
+        (uint16_t)(calib_buf[1] << 8 |
+                   calib_buf[0]);
+
+    calib.dig_T2 =
+        (int16_t)(calib_buf[3] << 8 |
+                  calib_buf[2]);
+
+    calib.dig_T3 =
+        (int16_t)(calib_buf[5] << 8 |
+                  calib_buf[4]);
+
+
+
+    /*
+     * 压力校准参数
+     */
+
+    calib.dig_P1 =
+        (uint16_t)(calib_buf[7] << 8 |
+                   calib_buf[6]);
+
+    calib.dig_P2 =
+        (int16_t)(calib_buf[9] << 8 |
+                  calib_buf[8]);
+
+    calib.dig_P3 =
+        (int16_t)(calib_buf[11] << 8 |
+                  calib_buf[10]);
+
+    calib.dig_P4 =
+        (int16_t)(calib_buf[13] << 8 |
+                  calib_buf[12]);
+
+    calib.dig_P5 =
+        (int16_t)(calib_buf[15] << 8 |
+                  calib_buf[14]);
+
+    calib.dig_P6 =
+        (int16_t)(calib_buf[17] << 8 |
+                  calib_buf[16]);
+
+    calib.dig_P7 =
+        (int16_t)(calib_buf[19] << 8 |
+                  calib_buf[18]);
+
+    calib.dig_P8 =
+        (int16_t)(calib_buf[21] << 8 |
+                  calib_buf[20]);
+
+    calib.dig_P9 =
+        (int16_t)(calib_buf[23] << 8 |
+                  calib_buf[22]);
+
+
+
+    /*
+     * 湿度校准参数
+     *
+     * dig_H1 在 0xA1
+     */
+
+    ret = i2c_read_reg(
+            bme280_fd,
+            0xA1,
+            &calib.dig_H1,
+            1);
+
+    if(ret < 0)
+    {
+        printf("BME280读取H1校准参数失败！\n");
+        return -1;
+    }
+
+
+
+    /*
+     * dig_H2 ~ dig_H6
+     *
+     * 地址:
+     * 0xE1 ~ 0xE7
+     */
+
+    ret = i2c_read_reg(
+            bme280_fd,
+            0xE1,
+            hum_buf,
+            7);
+
+    if(ret < 0)
+    {
+        printf("BME280读取湿度校准参数失败！\n");
+        return -1;
+    }
+
+
+
+    calib.dig_H2 =
+        (int16_t)(hum_buf[1] << 8 |
+                  hum_buf[0]);
+
+
+    calib.dig_H3 =
+        hum_buf[2];
+
+
+
+    /*
+     * H4/H5 是特殊拼接
+     */
+
+    calib.dig_H4 =
+        (int16_t)((hum_buf[3] << 4)
+        | (hum_buf[4] & 0x0F));
+
+
+    calib.dig_H5 =
+        (int16_t)((hum_buf[5] << 4)
+        | (hum_buf[4] >> 4));
+
+
+    calib.dig_H6 =
+        (int8_t)hum_buf[6];
+
+
+
+    /*
+     * 打印检查
+     */
+
+    printf("BME280 calibration loaded:\n");
+
+    printf("T1=%u T2=%d T3=%d\n",
+            calib.dig_T1,
+            calib.dig_T2,
+            calib.dig_T3);
+
+
+    printf("P1=%u\n",
+            calib.dig_P1);
+
+
+    printf("H1=%u H2=%d H3=%u H4=%d H5=%d H6=%d\n",
+            calib.dig_H1,
+            calib.dig_H2,
+            calib.dig_H3,
+            calib.dig_H4,
+            calib.dig_H5,
+            calib.dig_H6);
+
+
+    return 0;
 }

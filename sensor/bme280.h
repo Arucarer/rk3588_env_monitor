@@ -37,9 +37,7 @@ typedef struct {
 
 
 int bme280_init(void);
-int bme280_config(void);
 int bme280_read_data(bme280_data_t *data);
-int bme280_read_id(uint8_t *id);
 void bme280_deinit(void);
 
 #endif

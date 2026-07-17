@@ -25,11 +25,8 @@
  #include <stdint.h>
 
  int adc_open(const char *dev_path);
- int adc_read_raw(const char *path, int *raw);// 读取 ADC 原始采样值
- int adc_read_voltage(const char *raw_path,
-    const char *scale_path,
-    float *voltage);// 读取 ADC 电压值
-
+ int adc_read_raw(const char *path, int *raw);                                          // 读取 ADC 原始采样值
+ int adc_read_voltage(const char *raw_path, const char *scale_path, float *voltage);    // 读取 ADC 电压值
 float adc_raw_to_percent(int raw, int dry_raw, int wet_raw);
  
  #endif

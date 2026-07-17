@@ -26,7 +26,7 @@
  int adc_open(const char *dev_path)
  {
     int fd;
-    fd = open(dev_path, O_RDONLY);
+    fd = open(dev_path, O_RDONLY);//O_RDONLY:只读方式打开
     return fd;
  }
  int adc_read_raw(const char *path, int *raw)
@@ -34,24 +34,19 @@
     int fd;
     int ret;
     char buf[32];
-
     if (path == NULL || raw == NULL)
         return -1;
-
     fd = adc_open(path);
-    if (fd < 0)
-    {
+    if (fd < 0){
         close(fd);
         return -1;
     }
     ret = read(fd, buf, sizeof(buf) - 1);
-    if (ret <= 0)
-    {
+    if (ret <= 0){
         close(fd);
         return -1;
     }
-
-    buf[ret] = '\0';
+    buf[ret] = '\0';//最后添加字符串结束符
     *raw = atoi(buf);
     close(fd);
     return 0;
@@ -61,7 +56,7 @@
  {
     int raw;
     int ret;
-    float scale;
+    float scale;// 读取 IIO sysfs 节点中的数据
     FILE *fp;
 
     ret = adc_read_raw(raw_path, &raw);
