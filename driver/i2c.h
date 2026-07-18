@@ -20,6 +20,7 @@
 #define __I2C_H__
 
 #include <stdint.h>
+#include <stddef.h>
 
 int i2c_open(const char *dev_path);                                     // 打开 I2C 设备节点
 int i2c_set_addr(int fd, uint8_t addr);                                 // 设置 I2C 从设备地址

@@ -51,7 +51,7 @@
 
  int rs485_sht30_init(int uart_fd);
  
- int rs485_sht30_read_raw(int uart_fd, uint16_t *temp_raw, uint16_t *humi_raw)
+ int rs485_sht30_read_raw(int uart_fd, uint16_t *temp_raw, uint16_t *humi_raw);
  
  int rs485_sht30_convert_temperature(uint16_t temp_raw, float *temperature);
  

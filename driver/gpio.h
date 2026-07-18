@@ -26,8 +26,8 @@
  
  #include <stdint.h>
  
- #define GPIO_INPUT   "in"
- #define GPIO_OUTPUT  "out"
+ #define GPIO_INPUT   0
+ #define GPIO_OUTPUT  1
 
  int gpio_export(int gpio);
  int gpio_set_direction(int gpio, int direction);
@@ -36,4 +36,4 @@
  int gpio_unexport(int gpio);
 
 
- #include <stdint.h>
+ #endif /* __GPIO_H__ */

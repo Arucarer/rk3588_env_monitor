@@ -61,7 +61,7 @@
  /* 雨滴传感器 AO 对应的 ADC raw 文件路径 */
  #define RAIN_ADC_AO_PATH    "/sys/bus/iio/devices/iio:device0/in_voltage4_raw"
  /* 土壤传感器 AO 对应的 ADC raw 文件路径 */
- #define SOIL_ADC_AO_PIN        "/sys/bus/iio/devices/iio:device0/in_voltageX_raw"
+ #define SOIL_ADC_AO_PATH       "/sys/bus/iio/devices/iio:device0/in_voltageX_raw"
 
  /* RS485收发方向控制引脚
   * 自动流向TTL转RS485模块不需要使用该引脚。
@@ -171,6 +171,7 @@
 
 /* MQTT 服务质量等级 */
 #define MQTT_QOS                   1
+#define MQTT_RETAIN                0
 
 #define MQTT_TIMEOUT_MS            5000L /* 消息发送和断开连接超时时间，单位：毫秒 */
 

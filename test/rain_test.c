@@ -86,7 +86,14 @@
          /*
           * 判断是否下雨
           */
-         rain_flag = rain_detect(adc_value);
+         ret = rain_detect(&rain_flag);
+
+         if (ret < 0)
+         {
+             printf("Rain detect failed!\n");
+             sleep(1);
+             continue;
+         }
  
  
          if(rain_flag)

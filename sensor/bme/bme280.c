@@ -318,7 +318,7 @@ u32 bme280_compensate_pressure_int32(s32 v_uncomp_pressure_s32)
 	(((u32)(((s32)1048576) - v_uncomp_pressure_s32)
 	- (v_x2_u32 >> BME280_SHIFT_BIT_POSITION_BY_12_BITS))) * 3125;
 	if (v_pressure_u32
-	< 0x80000000)
+	< 0x80000000) {
 		/* Avoid exception caused by division by zero */
 		if (v_x1_u32 != BME280_INIT_VALUE)
 			v_pressure_u32 =
@@ -327,13 +327,14 @@ u32 bme280_compensate_pressure_int32(s32 v_uncomp_pressure_s32)
 			((u32)v_x1_u32);
 		else
 			return BME280_INVALID_DATA;
-	else
+	} else {
 		/* Avoid exception caused by division by zero */
 		if (v_x1_u32 != BME280_INIT_VALUE)
 			v_pressure_u32 = (v_pressure_u32
 			/ (u32)v_x1_u32) * 2;
 		else
 			return BME280_INVALID_DATA;
+	}
 
 		v_x1_u32 = (((s32)p_bme280->cal_param.dig_P9) *
 		((s32)(((v_pressure_u32 >> BME280_SHIFT_BIT_POSITION_BY_03_BITS)

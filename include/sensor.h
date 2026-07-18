@@ -38,7 +38,7 @@ typedef struct
     float soil_humidity;        // 土壤湿度(%)
     /* 降雨 */
     float rainfall;             // 降雨量(mm)
-    bool rain_detected
+    bool rain_detected;
     /* PM */
     float pm25;                 // PM2.5(ug/m³)
     float pm10;                 // PM10(ug/m³)

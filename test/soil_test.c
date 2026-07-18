@@ -25,9 +25,6 @@
      int ret;
  
      uint16_t adc_value;
-     float moisture;
- 
- 
      printf("Soil sensor test start...\n");
  
  

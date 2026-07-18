@@ -17,7 +17,9 @@
  #include <stdio.h>
  #include <unistd.h>
  
- #include "sht30_rs485.h"
+#include "sht30_rs485.h"
+#include "uart.h"
+#include "config.h"
  
  
  int main(void)
@@ -33,7 +35,7 @@
      /*
       * 初始化SHT30
       */
-     ret = sht30_rs485_init();
+     ret = rs485_sht30_init(uart_open(UART_DEV_PATH));
  
      if(ret < 0)
      {
@@ -48,7 +50,7 @@
          /*
           * 读取温湿度
           */
-         ret = sht30_rs485_read_data(&data);
+         ret = rs485_sht30_read_data(&data);
  
  
          if(ret < 0)
@@ -79,7 +81,7 @@
  
  
  
-     sht30_rs485_deinit();
+     rs485_sht30_deinit();
  
  
      return 0;

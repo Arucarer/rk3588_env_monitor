@@ -69,6 +69,7 @@ int mqtt_client_init(void)
 int mqtt_client_publish_sensor_data(const sensor_data_t *data)//构建JSON数据
 {
     int ret = 0;
+    char json_buf[512];
     /* #1. 检查参数和 MQTT 连接状态 */
     if (!data || !mqtt_client) {
         fprintf(stderr, "Invalid parameter or MQTT client not initialized\n");
@@ -99,11 +100,13 @@ int mqtt_client_publish_sensor_data(const sensor_data_t *data)//构建JSON数据
     if (ret != MQTTCLIENT_SUCCESS) {
         fprintf(stderr, "等待MQTT消息发送完成失败，ret=%d\n", ret);
         return ret;
+    }
+    return MQTTCLIENT_SUCCESS;
 }
 
 int mqtt_client_is_connected(void)//检测连接状态
 {
-    if (mqtt_client != NULL)
+    if (mqtt_client == NULL)
     {
         return 0;
     }
@@ -113,7 +116,10 @@ int mqtt_client_is_connected(void)//检测连接状态
 
 void mqtt_client_deinit(void)//释放MQTT客户端资源
 {
-    MQTTClient_disconnect(mqtt_client, 0);
+    if (mqtt_client != NULL) {
+        MQTTClient_disconnect(mqtt_client, 0);
+        MQTTClient_destroy(&mqtt_client);
+    }
 }
 
 

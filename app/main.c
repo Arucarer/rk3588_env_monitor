@@ -27,6 +27,8 @@ int main(int argc, char *argv[])
 {
     int ret;
     sensor_data_t env_data;
+    (void)argc;
+    (void)argv;
     printf("RK3588 Linux智能环境综合监测系统\n"); 
 
     ret = sensor_manager_init();

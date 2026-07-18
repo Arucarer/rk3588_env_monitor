@@ -26,11 +26,15 @@
  * 4. 负温度采用大于等于 10000 的特殊编码方式。
  *
  ******************************************************************************/
-#include "rs485_sht30.h"
+#include "sht30_rs485.h"
 #include "modbus_master.h"
+#include "uart.h"
 
 #include <errno.h>
 #include <stdio.h>
+#include <string.h>
+
+static int sht30_uart_fd = -1;
 
 
 int rs485_sht30_init(int uart_fd)
@@ -41,6 +45,7 @@ int rs485_sht30_init(int uart_fd)
         printf("UART open failed: %s\n", strerror(errno));
         return -1;
     }
+    sht30_uart_fd = uart_fd;
     ret = modbus_master_read_input_registers(uart_fd,
                                               RS485_SHT30_SLAVE_ADDR,
                                               RS485_SHT30_TEMP_REG_ADDR,
@@ -70,7 +75,8 @@ int rs485_sht30_read_raw(int uart_fd, uint16_t *temp_raw, uint16_t *humi_raw)
                                               registers);
 
     if (ret != MODBUS_OK) {
-        fprintf(stderr,"sensor error,ret = %d\n", ret)
+        fprintf(stderr,"sensor error,ret = %d\n", ret);
+        return ret;
     }
     *temp_raw = registers[0];
     *humi_raw = registers[1];
@@ -108,16 +114,16 @@ int rs485_sht30_read_data(rs485_sht30_data_t *data)
     if (data == NULL) {
         return -1;
     }
-    ret = rs485_sht30_read_raw(uart_fd, &temp_raw, &humi_raw);
+    ret = rs485_sht30_read_raw(sht30_uart_fd, &temp_raw, &humi_raw);
     if (ret != MODBUS_OK)
     {
         return ret;
     }
-    ret = rs485_sht30_convert_temperature(temp_raw, &data->temperature)
+    ret = rs485_sht30_convert_temperature(temp_raw, &data->temperature);
     if (ret != MODBUS_OK) {
         return ret;
     }
-    ret = rs485_sht30_convert_humidity(humi_raw, &data->humidity)
+    ret = rs485_sht30_convert_humidity(humi_raw, &data->humidity);
     if (ret != MODBUS_OK) {
         return ret;
     }
@@ -126,7 +132,8 @@ int rs485_sht30_read_data(rs485_sht30_data_t *data)
 
 void rs485_sht30_deinit(void)
 {
-    if (uart_fd >= 0) {
-        uart_close(uart_fd);
+    if (sht30_uart_fd >= 0) {
+        uart_close(sht30_uart_fd);
+        sht30_uart_fd = -1;
     }
 }

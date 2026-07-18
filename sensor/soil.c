@@ -14,28 +14,29 @@
  ******************************************************************************/
 #include "soil.h"
 #include "config.h"
-#include "driver/adc.h"
+#include "adc.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>//errno
 #include <stddef.h>// NULL
 #include <fcntl.h>//open
+#include <unistd.h>//close
 
 static int soil_adc_fd = -1;   /* 土壤传感器 ADC 文件描述符 */
 int soil_init(void)
 {
-    int ret;
-    ret = adc_open(SOIL_ADC_AO_PATH);
-    if (ret < 0) {
+    soil_adc_fd = adc_open(SOIL_ADC_AO_PATH);
+    if (soil_adc_fd < 0) {
         perror("adc_open");
-        return ret;
+        return soil_adc_fd;
     }
-    return 0;    
+    return 0;
 }
  
 int soil_read_adc(uint16_t *adc_value)
 {
+    int raw;
     int ret;
     if(adc_value == NULL)
     {
@@ -44,11 +45,12 @@ int soil_read_adc(uint16_t *adc_value)
     if (soil_adc_fd < 0) {
         return -1;
     }
-    ret = adc_read_raw(SOIL_ADC_AO_PATH, adc_value);
+    ret = adc_read_raw(SOIL_ADC_AO_PATH, &raw);
     if (ret < 0) {
         perror("adc_read_raw");
         return ret;
     }
+    *adc_value = (uint16_t)raw;
     return 0;
 }
 
@@ -70,7 +72,6 @@ void soil_deinit(void)
         close(soil_adc_fd);
         soil_adc_fd = -1;
     }
-    return 0;
 }
 
 

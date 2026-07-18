@@ -19,6 +19,7 @@
 #define __UART_H__ 
 
 #include <stdint.h>
+#include <stddef.h>
 
 /* 串口配置结构体 */
 

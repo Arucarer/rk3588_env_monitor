@@ -32,6 +32,7 @@
 #include "rain.h"
 
 #include "config.h"
+#include "uart.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -74,6 +75,9 @@ int sensor_manager_collect(sensor_data_t *data)
 {
     int ret = 0;
     uint16_t rain_adc;
+    uint16_t soil_adc;
+    bme280_data_t bme_data;
+    rs485_sht30_data_t sht30_data;
     if(data == NULL)
     {
         return -1;
@@ -81,14 +85,22 @@ int sensor_manager_collect(sensor_data_t *data)
     memset(data,0,sizeof(sensor_data_t)); // 清空数据结构
     data->valid=0;
 
-    if(bme280_read_data(&data->bme_temperature, &data->pressure, &data->bme_humidity) < 0){
+    if(bme280_read_data(&bme_data) < 0){
         ret = -1;
+    } else {
+        data->bme_temperature = bme_data.temperature;
+        data->pressure = bme_data.pressure;
+        data->bme_humidity = bme_data.humidity;
     }
-    if(rs485_sht30_read_data(&data->temperature, &data->humidity) < 0){
+    if(rs485_sht30_read_data(&sht30_data) < 0){
         ret = -1;
+    } else {
+        data->temperature = sht30_data.temperature;
+        data->humidity = sht30_data.humidity;
     }
     /* 土壤 */
-    if(soil_read_adc(&data->soil_humidity) < 0){
+    if(soil_read_adc(&soil_adc) < 0 ||
+       soil_get_moisture(soil_adc, &data->soil_humidity) < 0){
         ret = -1;
     }
     /* 雨滴 */
@@ -100,7 +112,10 @@ int sensor_manager_collect(sensor_data_t *data)
     }
     data->valid = (ret == 0);
     data->timestamp = time(NULL);
-    data->rain_detected = rain_detect(rain_adc);
+    if (rain_detect(&data->rain_detected) < 0) {
+        ret = -1;
+        data->valid = false;
+    }
     return ret;
 }
 

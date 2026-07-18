@@ -56,7 +56,7 @@
     {
         return -1;
     }
-    if (direction == GPIO_IN)
+    if (direction == GPIO_INPUT)
         ret = write(fd, "in", 2);
     else
         ret = write(fd, "out", 3);

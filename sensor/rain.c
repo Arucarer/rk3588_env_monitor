@@ -40,7 +40,7 @@ int rain_init(void)
         return ret;
     }
     /*2. 打开AO\VO对应的ADC引脚*/
-    rain_adc_fd = adc_open(RAIN_ADC_AO_PIN);
+    rain_adc_fd = adc_open(RAIN_ADC_AO_PATH);
     if (rain_adc_fd < 0) {
         perror("adc_open");
         gpio_unexport(GPIO_RAIN_DO_PIN);
@@ -51,6 +51,7 @@ int rain_init(void)
 // 1. 通过 ADC 读取雨滴检测板的模拟输出；
 int rain_read_adc(uint16_t *adc_value)
 {
+    int raw;
     int ret;
     if (adc_value == NULL) {
         return -1;
@@ -59,11 +60,12 @@ int rain_read_adc(uint16_t *adc_value)
         return -1;
     }
     
-    ret = adc_read_raw(rain_adc_fd, adc_value);
+    ret = adc_read_raw(RAIN_ADC_AO_PATH, &raw);
     if (ret < 0) {
         perror("adc_read_raw");
         return ret;
     }
+    *adc_value = (uint16_t)raw;
     return 0;
 }
 // 3. 将 ADC 原始值转换为湿润程度百分比。
