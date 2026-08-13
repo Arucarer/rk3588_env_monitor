@@ -28,26 +28,27 @@
 
 typedef struct
 {
-    float bme_temperature;
-    float temperature;          // 温度(℃)
-    float bme_humidity;
-    float humidity;             // 湿度(%RH)
-    /* 气压 */
-    float pressure;             // 气压(hPa)
+    /* BME280：I2C */
+    float bme_temperature; /* 空气温度，单位：°C */
+    float bme_humidity;    /* 空气相对湿度，单位：%RH */
+    float pressure;        /* 大气压力，单位：hPa */
+
+    /* SHT30：RS485 / Modbus RTU */
+    float temperature;     /* 空气温度，单位：°C */
+    float humidity;        /* 空气相对湿度，单位：%RH */
+
     /* 土壤 */
     float soil_humidity;        // 土壤湿度(%)
-    /* 降雨 */
-    float rainfall;             // 降雨量(mm)
-    bool rain_detected;
-    /* PM */
-    float pm25;                 // PM2.5(ug/m³)
-    float pm10;                 // PM10(ug/m³)
-    /* 臭氧 */
-    float ozone;                // 臭氧(ppm)
+
+    /* 雨量传感器 */
+    bool rain_detected;    /* 当前是否检测到降雨 */
+    float rainfall;        /* 降雨量，单位：mm */
+
     /* 数据状态 */
     bool valid;                 // 数据是否有效
     /* 时间戳 */
     uint64_t timestamp;         // 采集时间(s)
+
 }sensor_data_t;
 
 #endif /* __SENSOR_H__ */

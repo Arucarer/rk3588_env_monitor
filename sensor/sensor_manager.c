@@ -37,40 +37,49 @@
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
-int sensor_manager_init(void)
+#include "mock_sensor.h"
+
+static sensor_mode_t current_mode = SENSOR_MODE_REAL;
+
+int sensor_manager_init(sensor_mode_t mode)
 {
     int ret = 0;
-    if(bme280_init() < 0)
-    {
+
+    current_mode = mode;
+
+    /* 虚拟传感器模式：不访问任何硬件 */
+    if (current_mode == SENSOR_MODE_MOCK) {
+        return mock_sensor_init();
+    }
+
+    /* 真实传感器模式 */
+    if (bme280_init() < 0) {
         printf("BME280 init failed\n");
         ret = -1;
     }
-    
-    if(rs485_sht30_init(uart_open(UART_DEV_PATH)) < 0)
-    {
+
+    if (rs485_sht30_init(uart_open(UART_DEV_PATH)) < 0) {
         printf("SHT30 init failed\n");
         ret = -1;
     }
-    if(soil_init() < 0)
-    {
+
+    if (soil_init() < 0) {
         printf("soil init failed\n");
         ret = -1;
     }
-    
-    if(rain_init() < 0)
-    {
+
+    if (rain_init() < 0) {
         printf("rain init failed\n");
         ret = -1;
     }
 
-    if(ret < 0)
-    {
+    if (ret < 0) {
         printf("sensor init failed\n");
         return -1;
-    }    
-    return ret;
+    }
+
+    return 0;
 }
- 
 int sensor_manager_collect(sensor_data_t *data)
 {
     int ret = 0;
@@ -82,6 +91,11 @@ int sensor_manager_collect(sensor_data_t *data)
     {
         return -1;
     }
+
+    if (current_mode == SENSOR_MODE_MOCK) {
+        return mock_sensor_collect(data);
+    }
+
     memset(data,0,sizeof(sensor_data_t)); // 清空数据结构
     data->valid=0;
 
@@ -121,6 +135,10 @@ int sensor_manager_collect(sensor_data_t *data)
 
 void sensor_manager_deinit(void)
 {
+    if (current_mode == SENSOR_MODE_MOCK) {
+        mock_sensor_deinit();
+        return;
+    }
     bme280_deinit();
     rs485_sht30_deinit();
     soil_deinit();

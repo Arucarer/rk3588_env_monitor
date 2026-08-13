@@ -28,11 +28,19 @@
  #include "soil.h"
  #include "rain.h"
 
- int sensor_manager_init(void);
+
+ /* 传感器数据来源 */
+typedef enum
+{
+    SENSOR_MODE_REAL = 0,
+    SENSOR_MODE_MOCK
+} sensor_mode_t;
+
+ int sensor_manager_init(sensor_mode_t mode);
  
  int sensor_manager_collect(sensor_data_t *data);
  
  void sensor_manager_deinit(void);
  
  
- #endif
+ #endif /* __SENSOR_MANAGER_H__ */

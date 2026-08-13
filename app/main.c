@@ -31,18 +31,39 @@ int main(int argc, char *argv[])
     (void)argv;
     printf("RK3588 Linux智能环境综合监测系统\n"); 
 
-    ret = sensor_manager_init();
-    if (ret != 0) {
-        printf("传感器初始化失败, ret=%d\n", ret);
-        return -1;
-    }
+    ret = sensor_manager_init(SENSOR_MODE_MOCK);
+    // if (ret != 0) {
+    //     printf("传感器初始化失败, ret=%d\n", ret);
+    //     return -1;
+    // }
     while (1)
     {
+        /* 采集当前环境数据 */
         ret = sensor_manager_collect(&env_data);
         if(ret != 0) {
             printf("传感器数据采集失败, ret=%d\n", ret);
+            sleep(1);
             continue;
         }
+
+        /* 输出当前环境数据 */
+        printf(
+            "time=%llu, "
+            "BME[temp=%.2f C, humidity=%.2f %%RH, pressure=%.2f hPa], "
+            "SHT30[temp=%.2f C, humidity=%.2f %%RH], "
+            "soil=%.2f %%, rain=%d, rainfall=%.2f mm, valid=%d\n",
+            (unsigned long long)env_data.timestamp,
+            env_data.bme_temperature,
+            env_data.bme_humidity,
+            env_data.pressure,
+            env_data.temperature,
+            env_data.humidity,
+            env_data.soil_humidity,
+            env_data.rain_detected ? 1 : 0,
+            env_data.rainfall,
+            env_data.valid ? 1 : 0
+        );        
+
         sleep(1);
     }
     sensor_manager_deinit();
