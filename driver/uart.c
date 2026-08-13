@@ -23,6 +23,8 @@
 #include <string.h>
 #include <termios.h>
 
+static speed_t get_baudrate(uint32_t baudrate);
+
 int uart_open(const char *dev_path)
 {
     int fd = open(dev_path, O_RDWR | O_NOCTTY | O_NDELAY);//O_RDWR | O_NOCTTY | O_NDELAY是只读、只写、非阻塞模式打开串口设备

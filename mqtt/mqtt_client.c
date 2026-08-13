@@ -51,7 +51,7 @@ int mqtt_client_init(void)
     conn_opts.cleansession = MQTT_CLEAN_SESSION;
     // conn_opts.username = MQTT_USER;//用户名
     // conn_opts.password = MQTT_PASS;//登录密码
-    conn_opts.connectTimeout = MQTT_TIMEOUT_MS;//最大等候时间
+    conn_opts.connectTimeout = (int)(MQTT_TIMEOUT_MS / 1000L);//最大等候时间
     
     /* #4. 建立与 MQTT Broker 的网络连接 */
     ret = MQTTClient_connect(mqtt_client, &conn_opts);
