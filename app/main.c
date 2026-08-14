@@ -26,6 +26,9 @@
 #include "sqlite_manager.h"
 #include "mqtt_client.h"
 
+
+
+
 int main(int argc, char *argv[])
 {
     int ret;

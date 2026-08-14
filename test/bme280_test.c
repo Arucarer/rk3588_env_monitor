@@ -37,7 +37,7 @@ int main(void)
             printf("Humidity: %.2f %%RH\n",
                     data.humidity);
 
-            printf("Pressure: %.2f Pa\n",
+            printf("Pressure: %.2f hPa\n",
                     data.pressure);
 
             printf("====================\n");

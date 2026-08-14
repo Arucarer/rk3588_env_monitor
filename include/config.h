@@ -28,7 +28,8 @@
   ******************************************************************************/
  
  /* I2C设备节点 */
- #define I2C_DEV_PATH                   "/dev/i2c-1"
+ #define I2C_DEV_PATH      "/dev/i2c-5"
+ #define I2C_BME280_ADDR   0x76
  
  /* UART设备节点 */
  #define UART_DEV_PATH                  "/dev/ttyS4"
@@ -112,7 +113,6 @@
   * SDO接GND时通常为0x76；
   * SDO接VCC时通常为0x77。
   */
- #define I2C_BME280_ADDR                0x76
  
  /* I2C操作超时时间，单位：ms */
  #define I2C_TIMEOUT_MS                 1000

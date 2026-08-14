@@ -28,7 +28,7 @@
 
 #include "bme280.h"
 #include "i2c.h"
-
+#include "config.h"
 
 #include <stdio.h>
 #include <stdint.h>
@@ -101,7 +101,7 @@ int bme280_init(void)
     int ret;
     uint8_t id = 0;
     /* 1. 打开 I2C 设备 */
-    bme280_fd = i2c_open("/dev/i2c-1");
+    bme280_fd = i2c_open(I2C_DEV_PATH);
     if(bme280_fd < 0)
     {
         printf("BME280 打开设备错误！\n");
@@ -252,13 +252,13 @@ int bme280_read_data(bme280_data_t *data)
 
     //处理原始数据
     data->temperature = bme280_compensate_temperature(temp_raw);
-    printf("BME280 temperature: %.2f\n", data->temperature);
+    printf("BME280 temperature: %.2f C\n", data->temperature);
 
     data->pressure = bme280_compensate_pressure(press_raw);
-    printf("BME280 pressure: %.2f\n", data->pressure);
+    printf("BME280 pressure: %.2f hPa\n", data->pressure);
 
     data->humidity = bme280_compensate_humidity(hum_raw);
-    printf("BME280 humidity: %.2f\n", data->humidity);
+    printf("BME280 humidity: %.2f %%RH\n", data->humidity);
 
     return 0;
 }
@@ -305,41 +305,43 @@ static float bme280_compensate_pressure(int32_t adc_P)
     int64_t var2;
     int64_t p;
 
-
     var1 = ((int64_t)t_fine) - 128000;
 
-    var2 = var1 * var1 * calib.dig_P6;
-
-    var2 = var2 +
-        ((var1 * calib.dig_P5)<<17);
-
-    var2 = var2 +
-        (((int64_t)calib.dig_P4)<<35);
-
-
-    var1 = ((var1 * var1 * calib.dig_P3)>>8)
-          +
-          ((var1 * calib.dig_P2)<<12);
-
+    var2 = var1 * var1 * (int64_t)calib.dig_P6;
+    var2 += (var1 * (int64_t)calib.dig_P5) << 17;
+    var2 += ((int64_t)calib.dig_P4) << 35;
 
     var1 =
-    (((((int64_t)1)<<47)+var1))
-    *
-    calib.dig_P1 >>33;
+        ((var1 * var1 * (int64_t)calib.dig_P3) >> 8) +
+        ((var1 * (int64_t)calib.dig_P2) << 12);
 
+    var1 =
+        (((((int64_t)1) << 47) + var1) *
+         (int64_t)calib.dig_P1) >> 33;
 
-    if(var1==0)
-        return 0;
+    if (var1 == 0) {
+        return 0.0f;
+    }
 
+    p = 1048576 - adc_P;
+    p = (((p << 31) - var2) * 3125) / var1;
 
-    p = 1048576-adc_P;
+    var1 =
+        ((int64_t)calib.dig_P9 *
+         (p >> 13) *
+         (p >> 13)) >> 25;
 
+    var2 =
+        ((int64_t)calib.dig_P8 * p) >> 19;
 
-    p = (((p<<31)-var2)*3125)/var1;
+    p =
+        ((p + var1 + var2) >> 8) +
+        ((int64_t)calib.dig_P7 << 4);
 
-
-    return (p/256.0)/100.0;
+    /* Bosch结果为Pa×256，这里统一转换为hPa */
+    return (float)p / 25600.0f;
 }
+
 static float bme280_compensate_humidity(int32_t adc_H)
 {
     int32_t v_x1_u32r;
