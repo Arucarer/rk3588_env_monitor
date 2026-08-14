@@ -1,9 +1,9 @@
-CC := gcc
+CC ?= gcc
 
 TARGET := env_monitor
 
 CFLAGS := -Wall -Wextra -std=c11
-INCLUDES := -Iinclude -Isensor -Idriver -Imodbus -Idatabase -Imqtt -I/usr/local/include
+INCLUDES := -Iinclude -Isensor -Idriver -Imodbus -Idatabase -Imqtt
 LDLIBS := -lsqlite3 -lpaho-mqtt3c
 
 SOURCES := \

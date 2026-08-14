@@ -22,6 +22,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <signal.h>
+#include <string.h>
 
 #include "sqlite_manager.h"
 #include "mqtt_client.h"
@@ -32,15 +33,37 @@
 int main(int argc, char *argv[])
 {
     int ret;
+    sensor_mode_t mode;
     sensor_data_t env_data;
     sensor_data_t latest_data;
-
-    (void)argc;
-    (void)argv;
     printf("RK3588 Linux智能环境综合监测系统\n"); 
 
+    /*
+    * 命令格式：
+    * ./env_monitor --mode mock
+    * ./env_monitor --mode real
+    */
+    if (argc != 3 || strcmp(argv[1], "--mode") != 0) {
+        printf("Usage: %s --mode <mock|real>\n", argv[0]);
+        return -1;
+    }
+    /*参数数量不是3个或者 第二个参数不是 --mode ，就是错误*/
+
+    if (strcmp(argv[2], "mock") == 0) {
+        mode = SENSOR_MODE_MOCK;
+        printf("Sensor mode: mock\n");
+    } else if (strcmp(argv[2], "real") == 0) {
+        mode = SENSOR_MODE_REAL;
+        printf("Sensor mode: real\n");
+    } else {
+        printf("Invalid sensor mode: %s\n", argv[2]);
+        printf("Usage: %s --mode <mock|real>\n", argv[0]);
+        return -1;
+    }/*既不是 mock 也不是 real，程序会输出错误并退出*/
+
+
     /* 初始化虚拟传感器 */
-    ret = sensor_manager_init(SENSOR_MODE_MOCK);
+    ret = sensor_manager_init(mode);
     if (ret != 0) {
         printf("传感器初始化失败, ret=%d\n", ret);
         return -1;
@@ -67,7 +90,7 @@ int main(int argc, char *argv[])
 
     while (1)
     {
-        /* 1. 采集虚拟环境数据 */
+        /* 1. 采集环境数据 */
         ret = sensor_manager_collect(&env_data);
         if (ret != 0) {
             printf("传感器数据采集失败, ret=%d\n", ret);

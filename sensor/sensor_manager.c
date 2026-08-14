@@ -52,27 +52,36 @@ int sensor_manager_init(sensor_mode_t mode)
         return mock_sensor_init();
     }
 
-    /* 真实传感器模式 */
-    if (bme280_init() < 0) {
-        printf("BME280 init failed\n");
-        ret = -1;
-    }
+    /* 真实传感器模式：只初始化配置中启用的传感器 */
+    #if SENSOR_ENABLE_BME280
+        if (bme280_init() < 0) {
+            printf("BME280 init failed\n");
+            ret = -1;
+        }
+    #endif
+    /* 条件编译，只有不为0的时候，这个才会被编译 */
+    #if SENSOR_ENABLE_SHT30
+        if (rs485_sht30_init(uart_open(UART_DEV_PATH)) < 0) {
+            printf("SHT30 init failed\n");
+            ret = -1;
+        }
+    #endif
 
-    if (rs485_sht30_init(uart_open(UART_DEV_PATH)) < 0) {
-        printf("SHT30 init failed\n");
-        ret = -1;
-    }
+    #if SENSOR_ENABLE_SOIL
+        if (soil_init() < 0) {
+            printf("soil init failed\n");
+            ret = -1;
+        }
+    #endif
 
-    if (soil_init() < 0) {
-        printf("soil init failed\n");
-        ret = -1;
-    }
+    #if SENSOR_ENABLE_RAIN
+        if (rain_init() < 0) {
+            printf("rain init failed\n");
+            ret = -1;
+        }
+    #endif
 
-    if (rain_init() < 0) {
-        printf("rain init failed\n");
-        ret = -1;
-    }
-
+    
     if (ret < 0) {
         printf("sensor init failed\n");
         return -1;
@@ -83,53 +92,81 @@ int sensor_manager_init(sensor_mode_t mode)
 int sensor_manager_collect(sensor_data_t *data)
 {
     int ret = 0;
-    uint16_t rain_adc;
-    uint16_t soil_adc;
+#if SENSOR_ENABLE_BME280
     bme280_data_t bme_data;
+#endif
+
+#if SENSOR_ENABLE_SHT30
     rs485_sht30_data_t sht30_data;
-    if(data == NULL)
-    {
+#endif
+
+#if SENSOR_ENABLE_SOIL
+    uint16_t soil_adc;
+#endif
+
+#if SENSOR_ENABLE_RAIN
+    uint16_t rain_adc;
+#endif
+
+    if (data == NULL) {
         return -1;
     }
 
+    /* 虚拟模式保持原来的采集逻辑 */
     if (current_mode == SENSOR_MODE_MOCK) {
         return mock_sensor_collect(data);
     }
 
-    memset(data,0,sizeof(sensor_data_t)); // 清空数据结构
-    data->valid=0;
+    /*
+     * 真实模式先将全部字段清零。
+     * 未启用传感器对应的字段将保持为 0。
+     */
+    memset(data, 0, sizeof(sensor_data_t));
+    data->timestamp = time(NULL);
 
-    if(bme280_read_data(&bme_data) < 0){
+#if SENSOR_ENABLE_BME280
+    if (bme280_read_data(&bme_data) < 0) {
+        printf("BME280 read failed\n");
         ret = -1;
     } else {
         data->bme_temperature = bme_data.temperature;
-        data->pressure = bme_data.pressure;
         data->bme_humidity = bme_data.humidity;
+        data->pressure = bme_data.pressure;
     }
-    if(rs485_sht30_read_data(&sht30_data) < 0){
+#endif
+
+#if SENSOR_ENABLE_SHT30
+    if (rs485_sht30_read_data(&sht30_data) < 0) {
+        printf("SHT30 read failed\n");
         ret = -1;
     } else {
         data->temperature = sht30_data.temperature;
         data->humidity = sht30_data.humidity;
     }
-    /* 土壤 */
-    if(soil_read_adc(&soil_adc) < 0 ||
-       soil_get_moisture(soil_adc, &data->soil_humidity) < 0){
+#endif
+
+#if SENSOR_ENABLE_SOIL
+    if (soil_read_adc(&soil_adc) < 0 ||
+        soil_get_moisture(soil_adc, &data->soil_humidity) < 0) {
+        printf("soil read failed\n");
         ret = -1;
     }
-    /* 雨滴 */
-    if(rain_read_adc(&rain_adc) < 0){
+#endif
+
+#if SENSOR_ENABLE_RAIN
+    if (rain_read_adc(&rain_adc) < 0 ||
+        rain_get_moisture(rain_adc, &data->rainfall) < 0) {
+        printf("rain ADC read failed\n");
         ret = -1;
     }
-    if(rain_get_moisture(rain_adc, &data->rainfall) < 0){
-        ret = -1;
-    }
-    data->valid = (ret == 0);
-    data->timestamp = time(NULL);
+
     if (rain_detect(&data->rain_detected) < 0) {
+        printf("rain detection failed\n");
         ret = -1;
-        data->valid = false;
     }
+#endif
+    data->valid = (ret == 0);
+
     return ret;
 }
 
@@ -139,8 +176,20 @@ void sensor_manager_deinit(void)
         mock_sensor_deinit();
         return;
     }
+
+#if SENSOR_ENABLE_BME280
     bme280_deinit();
+#endif
+
+#if SENSOR_ENABLE_SHT30
     rs485_sht30_deinit();
+#endif
+
+#if SENSOR_ENABLE_SOIL
     soil_deinit();
+#endif
+
+#if SENSOR_ENABLE_RAIN
     rain_deinit();
+#endif
 }

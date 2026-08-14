@@ -252,13 +252,13 @@ int bme280_read_data(bme280_data_t *data)
 
     //处理原始数据
     data->temperature = bme280_compensate_temperature(temp_raw);
-    printf("BME280 temperature: %.2f C\n", data->temperature);
+    printf("BME280 temperature: %.2f\n", data->temperature);
 
     data->pressure = bme280_compensate_pressure(press_raw);
-    printf("BME280 pressure: %.2f hPa\n", data->pressure);
+    printf("BME280 pressure: %.2f\n", data->pressure);
 
     data->humidity = bme280_compensate_humidity(hum_raw);
-    printf("BME280 humidity: %.2f %%RH\n", data->humidity);
+    printf("BME280 humidity: %.2f\n", data->humidity);
 
     return 0;
 }
