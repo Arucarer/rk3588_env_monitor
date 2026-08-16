@@ -1,28 +1,97 @@
+/******************************************************************************
+ * @file    mainwindow.cpp
+ * @brief   Qt 环境监测主窗口类声明
+ *
+ * @author  李宇坤
+ * @date    2026-08
+ * @version V1.0
+ *
+ * @details
+ * 本文件定义环境监测系统主窗口 MainWindow。
+ * MainWindow 主要负责：
+ * 1. 实时监测、趋势曲线、历史数据、告警日志和系统设置页面管理；
+ * 2. 接收 SensorData 并刷新界面；
+ * 3. 管理各 Worker 与 QThread；
+ * 4. 处理用户界面事件和系统状态显示。
+ *
+ * MainWindow 只负责界面展示和线程组织，不直接执行传感器采集、
+ * SQLite 数据库操作或 MQTT 网络通信。
+ ******************************************************************************/
+
 #include "mainwindow.h"
 #include "./ui_mainwindow.h"
+#include "acquisitionworker.h"
+#include "databaseworker.h"
+#include "mqttworker.h"
 
-#include <QRandomGenerator>
 #include <QTimer>
-#include <QtMath>
+#include <QThread>
 #include <QButtonGroup>
+#include <QMetaObject>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
     , clockTimer(nullptr)
-    , mockTimer(nullptr)
+    , acquisitionThread(nullptr)
+    , acquisitionWorker(nullptr)
+    , databaseThread(nullptr)
+    , databaseWorker(nullptr)
+    , mqttThread(nullptr)
+    , mqttWorker(nullptr)
 {
     ui->setupUi(this);
 
     setupConnections();
     setupTimers();
 
+    setupDatabaseThread();
+    setupMqttThread();
+    setupAcquisitionThread();
+
     updateClock();
-    updateMockData();
 }
 
+//析构函数,安全退出三个线程
 MainWindow::~MainWindow()
 {
+    if (acquisitionThread != nullptr &&
+        acquisitionThread->isRunning()) {
+
+        QMetaObject::invokeMethod(
+            acquisitionWorker,
+            "stop",
+            Qt::BlockingQueuedConnection);
+
+        acquisitionThread->quit();
+        acquisitionThread->wait();
+    }
+
+    if (databaseThread != nullptr &&
+        databaseThread->isRunning()) {
+        //停止这个 Worker 自己的业务
+        QMetaObject::invokeMethod(
+            databaseWorker,
+            "stop",
+            Qt::BlockingQueuedConnection);
+        //让线程事件循环退出
+        databaseThread->quit();
+        //主线程等它真正结束
+        databaseThread->wait();
+    }
+
+    if (mqttThread != nullptr &&
+        mqttThread->isRunning()) {
+
+        QMetaObject::invokeMethod(
+            mqttWorker,
+            "stop",
+            Qt::BlockingQueuedConnection);
+
+        mqttThread->quit();
+        mqttThread->wait();
+    }
+
     delete ui;
 }
 
@@ -81,10 +150,6 @@ void MainWindow::setupTimers()
             this, &MainWindow::updateClock);
     clockTimer->start(1000);
 
-    mockTimer = new QTimer(this);
-    connect(mockTimer, &QTimer::timeout,
-            this, &MainWindow::updateMockData);
-    mockTimer->start(1000);
 }
 
 void MainWindow::updateClock()
@@ -93,46 +158,6 @@ void MainWindow::updateClock()
         QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss"));
 }
 
-void MainWindow::updateMockData()
-{
-    static double phase = 0.0;
-    phase += 0.15;
-
-    auto noise = []() {
-        return (QRandomGenerator::global()->generateDouble() - 0.5) * 0.6;
-    };
-
-    SensorData data;
-
-    data.temperature =
-        25.0 + 2.0 * qSin(phase) + noise();
-
-    data.humidity =
-        55.0 + 5.0 * qSin(phase * 0.7) + noise();
-
-    data.pressure =
-        1013.0 + 4.0 * qSin(phase * 0.3) + noise();
-
-    data.rs485Temperature =
-        24.5 + 1.8 * qSin(phase * 0.9) + noise();
-
-    data.rs485Humidity =
-        53.0 + 4.0 * qSin(phase * 0.6) + noise();
-
-    data.soilHumidity =
-        42.0 + 3.0 * qSin(phase * 0.2) + noise();
-
-    data.rainfall = qSin(phase * 0.4) > 0.75 ? 2.4 : 0.0;
-
-    data.bme280Online = true;
-    data.rs485Online = true;
-    data.soilSensorOnline = true;
-    data.rainSensorOnline = true;
-
-    data.timestamp = QDateTime::currentDateTime();
-
-    updateSensorDisplay(data);
-}
 
 void MainWindow::updateSensorDisplay(const SensorData &data)
 {
@@ -180,4 +205,81 @@ void MainWindow::updateSensorDisplay(const SensorData &data)
         ui->systemStatusLabel->setStyleSheet(
             "color: rgb(231, 76, 60);");
     }
+}
+
+
+void MainWindow::setupDatabaseThread()
+{
+    /*以数据库这个为例*/
+    databaseThread = new QThread(this);
+    /*创建一条数据库线程*/
+    databaseWorker = new DatabaseWorker();
+    /*创建一个真正负责数据库工作的对象*/
+    databaseWorker->moveToThread(databaseThread);
+    /*databaseThread 启动-自动调用DatabaseWorker::start()*/
+    connect(databaseThread,
+            &QThread::started,
+            databaseWorker,
+            &DatabaseWorker::start);
+    /*数据库线程结束以后，让 Qt 安全地销毁 databaseWorker*/
+    connect(databaseThread,
+            &QThread::finished,
+            databaseWorker,
+            &QObject::deleteLater);
+    /**/
+    databaseThread->start();
+}
+
+void MainWindow::setupMqttThread()
+{
+    mqttThread = new QThread(this);
+    mqttWorker = new MqttWorker();
+
+    mqttWorker->moveToThread(mqttThread);
+
+    connect(mqttThread,
+            &QThread::started,
+            mqttWorker,
+            &MqttWorker::start);
+
+    connect(mqttThread,
+            &QThread::finished,
+            mqttWorker,
+            &QObject::deleteLater);
+
+    mqttThread->start();
+}
+
+void MainWindow::setupAcquisitionThread()
+{
+    acquisitionThread = new QThread(this);
+    acquisitionWorker = new AcquisitionWorker();
+
+    acquisitionWorker->moveToThread(acquisitionThread);
+
+    connect(acquisitionThread,
+            &QThread::started,
+            acquisitionWorker,
+            &AcquisitionWorker::start);
+
+    connect(acquisitionWorker,
+            &AcquisitionWorker::sensorDataReady,
+            this,
+            &MainWindow::updateSensorDisplay);
+    connect(acquisitionWorker,
+            &AcquisitionWorker::sensorDataReady,
+            databaseWorker,
+            &DatabaseWorker::saveSensorData);
+
+    connect(acquisitionWorker,
+            &AcquisitionWorker::sensorDataReady,
+            mqttWorker,
+            &MqttWorker::publishSensorData);
+
+    connect(acquisitionThread,
+            &QThread::finished,
+            acquisitionWorker,
+            &QObject::deleteLater);
+
+    acquisitionThread->start();
 }
