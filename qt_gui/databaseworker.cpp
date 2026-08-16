@@ -13,6 +13,7 @@
  ******************************************************************************/
 
 #include "databaseworker.h"
+#include <QDebug>
 
 DatabaseWorker::DatabaseWorker(QObject *parent)
     : QObject(parent)

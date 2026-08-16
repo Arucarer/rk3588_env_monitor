@@ -22,7 +22,7 @@
 #include <QDateTime>
 #include <QDebug>
 
-#ifdef Q_OS_LINUX
+#if defined(Q_OS_LINUX) && defined(ENABLE_REAL_SENSOR)
 extern "C" {
 #include "sensor_manager.h"
 }
@@ -42,7 +42,7 @@ AcquisitionWorker::AcquisitionWorker(
 
 void AcquisitionWorker::start()
 {
-#ifdef Q_OS_LINUX
+#if defined(Q_OS_LINUX) && defined(ENABLE_REAL_SENSOR)
     if (mode == AcquisitionMode::Real) {
 
         if (sensor_manager_init(SENSOR_MODE_REAL) != 0) {
@@ -77,7 +77,7 @@ void AcquisitionWorker::stop()
         dataTimer->stop();
     }
 
-#ifdef Q_OS_LINUX
+#if defined(Q_OS_LINUX) && defined(ENABLE_REAL_SENSOR)
     if (mode == AcquisitionMode::Real) {
         sensor_manager_deinit();
     }
@@ -148,7 +148,7 @@ SensorData AcquisitionWorker::generateMockData()
 
 SensorData AcquisitionWorker::collectRealData()
 {
-#ifdef Q_OS_LINUX
+#if defined(Q_OS_LINUX) && defined(ENABLE_REAL_SENSOR)
 
     sensor_data_t rawData {};
 

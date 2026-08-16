@@ -13,6 +13,7 @@
  ******************************************************************************/
 
 #include "mqttworker.h"
+#include <QDebug>
 
 MqttWorker::MqttWorker(QObject *parent)
     : QObject(parent)
