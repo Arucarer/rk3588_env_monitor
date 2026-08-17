@@ -26,9 +26,10 @@
  #include <stdbool.h>
 
  #include "sensor.h"
- #include "device_config.h"
- #include "alarm.h"
+ #include "device_config_t.h"
+ #include "alarm_record_t.h"
  #include "system_log.h"
+ 
  typedef enum
  {
      SQLITE_MGR_OK = 0,          // 操作成功
