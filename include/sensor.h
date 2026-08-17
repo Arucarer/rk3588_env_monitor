@@ -46,6 +46,9 @@ typedef struct
 
     /* 数据状态 */
     bool valid;                 // 数据是否有效
+    bool is_abnormal;           // 是否为异常数据   
+
+
     /* 时间戳 */
     uint64_t timestamp;         // 采集时间(s)
 
