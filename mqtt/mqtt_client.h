@@ -26,8 +26,9 @@
 #define __MQTT_CLIENT_H__
 
 #include <stdint.h>
-#include "sensor_manager.h"
 #include "sensor.h"
+
+/******************** 初始化与连接 ********************/
 
 /* MQTT 客户端初始化 */
 int mqtt_client_init(void);
@@ -35,8 +36,14 @@ int mqtt_client_init(void);
 /* 连接 MQTT Broker */
 int mqtt_client_connect(void);
 
+
+/******************** 订阅与消息接收 ********************/
+
 /* 订阅云端控制主题 */
 int mqtt_client_subscribe(void);
+
+
+/******************** 数据发布 ********************/
 
 /* 发布传感器数据 */
 int mqtt_client_publish_sensor_data(const sensor_data_t *data);
@@ -47,6 +54,9 @@ int mqtt_client_publish_status(int online);
 /* 发布告警消息 */
 int mqtt_client_publish_alarm(const char *alarm_type, const char *message);
 
+
+/******************** 连接状态维护 ********************/
+
 /* 检测 MQTT 当前连接状态 */
 int mqtt_client_is_connected(void);
 
@@ -55,6 +65,9 @@ int mqtt_client_reconnect(void);
 
 /* MQTT 网络循环 / 状态维护 */
 int mqtt_client_loop(void);
+
+
+/******************** 资源释放 ********************/
 
 /* 释放 MQTT 客户端资源 */
 void mqtt_client_deinit(void);

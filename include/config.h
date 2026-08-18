@@ -175,23 +175,38 @@
   ******************************************************************************/
  
 
-#define MQTT_BROKER_ADDRESS       "tcp://169.254.1.100:1883"  /* MQTT Broker 地址 */
+/* MQTT Broker 地址 */
+#define MQTT_BROKER_ADDRESS        "tcp://169.254.1.100:1883"
 
-#define MQTT_CLIENT_ID             "rk3588_env_monitor_001"/* MQTT 客户端唯一标识 */
+/* MQTT 客户端唯一标识 */
+#define MQTT_CLIENT_ID             "rk3588_env_monitor_001"
 
-#define MQTT_PUBLISH_TOPIC         "rk3588/env_monitor/data"/* 数据发布主题 */
-
-#define MQTT_SUBSCRIBE_TOPIC       "rk3588/env_monitor/cmd"/* 命令订阅主题，当前最小版本暂时不用 */
+/* MQTT主题 */
+#define MQTT_PUBLISH_TOPIC         "env_monitor/rk3588_001/data"
+#define MQTT_STATUS_TOPIC          "env_monitor/rk3588_001/status"
+#define MQTT_ALARM_TOPIC           "env_monitor/rk3588_001/alarm"
+#define MQTT_SUBSCRIBE_TOPIC       "env_monitor/rk3588_001/command"
 
 /* MQTT 服务质量等级 */
 #define MQTT_QOS                   1
+
+/* 是否保留最后一条发布消息 */
 #define MQTT_RETAIN                0
 
-#define MQTT_TIMEOUT_MS            5000L /* 消息发送和断开连接超时时间，单位：毫秒 */
+/* MQTT 消息发送超时时间，单位：ms */
+#define MQTT_TIMEOUT_MS            5000L
 
-#define MQTT_KEEP_ALIVE_INTERVAL   20 /* MQTT 心跳间隔，单位：秒 */
+/* MQTT 心跳间隔，单位：s */
+#define MQTT_KEEP_ALIVE_INTERVAL   20
 
-#define MQTT_CLEAN_SESSION         1 /* 是否使用清洁会话 */
+/* 是否使用清洁会话 */
+#define MQTT_CLEAN_SESSION         1
+
+/* MQTT 断线重连间隔，单位：s */
+#define MQTT_RECONNECT_INTERVAL    5
+
+#define MQTT_USER "xxx"
+#define MQTT_PASS "xxx"
 
  
  
