@@ -1,6 +1,6 @@
 CC ?= gcc
 
-TARGET := env_monitor
+TARGET := env_monitorgit pull --ff-only origin main
 
 CFLAGS := -Wall -Wextra -std=c11
 INCLUDES := -Iinclude -Isensor -Idriver -Imodbus -Idatabase -Imqtt

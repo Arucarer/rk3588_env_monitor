@@ -85,6 +85,27 @@ int main(int argc, char *argv[])
         sensor_manager_deinit();
         return -1;
     }
+
+    /* 连接 MQTT Broker */
+    ret = mqtt_client_connect();
+    if (ret != 0) {
+        printf("MQTT connection failed, ret=%d\n", ret);
+        mqtt_client_deinit();
+        sqlite_manager_deinit();
+        sensor_manager_deinit();
+        return -1;
+    }
+
+    /* 订阅云端控制主题 */
+    ret = mqtt_client_subscribe();
+    if (ret != 0) {
+        printf("MQTT subscribe failed, ret=%d\n", ret);
+        mqtt_client_deinit();
+        sqlite_manager_deinit();
+        sensor_manager_deinit();
+        return -1;
+    }
+
     printf("MQTT connected: %s\n", MQTT_BROKER_ADDRESS);
 
 

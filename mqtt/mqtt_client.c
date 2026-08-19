@@ -220,20 +220,25 @@ int mqtt_client_publish_status(int online)
 }
 
 /* 发布告警消息 */
-int mqtt_client_publish_alarm(const char *alarm_type, const char *message)
+int mqtt_client_publish_alarm(const alarm_record_t *alarm)
 {
     int ret;
     char json_buf[256];
     MQTTClient_deliveryToken token;
 
     /* #1. 检查参数和 MQTT 连接状态 */
-    if (alarm_type == NULL || message == NULL || mqtt_client == NULL || !mqtt_client_is_connected()) {
-        fprintf(stderr, "Invalid alarm parameter or MQTT client not connected\n");
+    if (alarm == NULL || mqtt_client == NULL) {
+        fprintf(stderr, "Invalid alarm parameter or MQTT client not initialized\n");
+        return -1;
+    }
+
+    if (!mqtt_client_is_connected()) {
+        fprintf(stderr, "MQTT client not connected\n");
         return -1;
     }
 
     /* #2. 构建告警 JSON */
-    ret = mqtt_build_alarm_json(alarm_type, message, json_buf, sizeof(json_buf));
+    ret = mqtt_build_alarm_json(alarm, json_buf, sizeof(json_buf));
     if (ret != 0) {
         fprintf(stderr, "Failed to build MQTT alarm JSON\n");
         return -1;

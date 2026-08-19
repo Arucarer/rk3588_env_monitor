@@ -27,6 +27,9 @@
 
 #include <stdint.h>
 #include "sensor.h"
+#include "alarm_record_t.h"
+#include "device_config_t.h"
+
 
 /******************** 初始化与连接 ********************/
 
@@ -52,7 +55,7 @@ int mqtt_client_publish_sensor_data(const sensor_data_t *data);
 int mqtt_client_publish_status(int online);
 
 /* 发布告警消息 */
-int mqtt_client_publish_alarm(const char *alarm_type, const char *message);
+int mqtt_client_publish_alarm(const alarm_record_t *alarm);
 
 
 /******************** 连接状态维护 ********************/
