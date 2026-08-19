@@ -37,19 +37,16 @@ int soil_init(void)
 int soil_read_adc(uint16_t *adc_value)
 {
     int raw;
-    int ret;
-    if(adc_value == NULL)
-    {
+
+    if (adc_value == NULL || soil_adc_fd < 0) {
         return -1;
     }
-    if (soil_adc_fd < 0) {
+
+    if (adc_read_raw_fd(soil_adc_fd, &raw) < 0) {
+        perror("adc_read_raw_fd");
         return -1;
     }
-    ret = adc_read_raw(SOIL_ADC_AO_PATH, &raw);
-    if (ret < 0) {
-        perror("adc_read_raw");
-        return ret;
-    }
+
     *adc_value = (uint16_t)raw;
     return 0;
 }
@@ -57,6 +54,9 @@ int soil_read_adc(uint16_t *adc_value)
 int soil_get_moisture(uint16_t adc_value, float *moisture)
 {
     float percent;
+    if (moisture == NULL) {
+        return -1;
+    }
     percent = adc_raw_to_percent(adc_value, SOIL_ADC_DRY_VALUE, SOIL_ADC_WET_VALUE);
     if(percent < 0.0f)
     {

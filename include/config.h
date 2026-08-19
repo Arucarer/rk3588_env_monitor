@@ -55,8 +55,8 @@
  */
 #define SENSOR_ENABLE_BME280           1
 #define SENSOR_ENABLE_SHT30            0
-#define SENSOR_ENABLE_SOIL             0
-#define SENSOR_ENABLE_RAIN             0
+#define SENSOR_ENABLE_SOIL             1
+#define SENSOR_ENABLE_RAIN             1
 
  /******************************************************************************
   * #2 GPIO配置
@@ -70,13 +70,13 @@
   */
  
  /* 雨滴传感器DO数字输出引脚 */
- #define GPIO_RAIN_DO_PIN               (-1)
+ #define GPIO_RAIN_DO_PIN               23
  
 
  /* 雨滴传感器 AO 对应的 ADC raw 文件路径 */
- #define RAIN_ADC_AO_PATH    "/sys/bus/iio/devices/iio:device0/in_voltage4_raw"
+#define RAIN_ADC_AO_PATH "/sys/bus/iio/devices/iio:device0/in_voltage6_raw"
  /* 土壤传感器 AO 对应的 ADC raw 文件路径 */
- #define SOIL_ADC_AO_PATH       "/sys/bus/iio/devices/iio:device0/in_voltageX_raw"
+#define SOIL_ADC_AO_PATH "/sys/bus/iio/devices/iio:device0/in_voltage4_raw"
 
  /* RS485收发方向控制引脚
   * 自动流向TTL转RS485模块不需要使用该引脚。
@@ -108,15 +108,15 @@
  /* 土壤湿度传感器校准值
   * 后续分别测量完全干燥和充分湿润时的ADC原始值后修改。
   */
- #define SOIL_ADC_DRY_VALUE             3500
- #define SOIL_ADC_WET_VALUE             1000
+ #define SOIL_ADC_DRY_VALUE             1100
+ #define SOIL_ADC_WET_VALUE             798
  
  /* 雨滴传感器模拟量校准值
   * 后续根据无水和有水状态实测修改。
   */
- #define RAIN_ADC_DRY_VALUE             3300
- #define RAIN_ADC_WET_VALUE             800
- #define RAIN_DETECT_THRESHOLD          2500
+ #define RAIN_ADC_DRY_VALUE             2565
+ #define RAIN_ADC_WET_VALUE             1330
+ #define RAIN_DETECT_THRESHOLD          2200
  
  
  /******************************************************************************

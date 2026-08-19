@@ -96,3 +96,27 @@
  
      return percent;
  }
+
+ int adc_read_raw_fd(int fd, int *raw)
+ {
+     int ret;
+     char buf[32];
+ 
+     if (fd < 0 || raw == NULL) {
+         return -1;
+     }
+ 
+     if (lseek(fd, 0, SEEK_SET) < 0) {
+         return -1;
+     }
+ 
+     ret = read(fd, buf, sizeof(buf) - 1);
+     if (ret <= 0) {
+         return -1;
+     }
+ 
+     buf[ret] = '\0';
+     *raw = atoi(buf);
+ 
+     return 0;
+ }

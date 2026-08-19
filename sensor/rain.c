@@ -53,18 +53,17 @@ int rain_read_adc(uint16_t *adc_value)
 {
     int raw;
     int ret;
-    if (adc_value == NULL) {
+
+    if (adc_value == NULL || rain_adc_fd < 0) {
         return -1;
     }
-    if (rain_adc_fd < 0) {
-        return -1;
-    }
-    
-    ret = adc_read_raw(RAIN_ADC_AO_PATH, &raw);
+
+    ret = adc_read_raw_fd(rain_adc_fd, &raw);
     if (ret < 0) {
-        perror("adc_read_raw");
+        perror("adc_read_raw_fd");
         return ret;
     }
+
     *adc_value = (uint16_t)raw;
     return 0;
 }
@@ -101,7 +100,7 @@ int rain_detect(bool *detected)
         return ret;
     }
     //如果检测到雨滴，则返回true
-    if (gpio_value == 0) {
+    if (gpio_value == RAIN_DETECTED_LEVEL) {
         *detected = true;
     } else {
         *detected = false;
@@ -112,6 +111,8 @@ void rain_deinit(void)
 {
     if (rain_adc_fd >= 0) {
         close(rain_adc_fd);
+        rain_adc_fd = -1;
     }
+
     gpio_unexport(GPIO_RAIN_DO_PIN);
 }
