@@ -1,0 +1,10 @@
+{
+    "device": "rk3588_env_monitor",
+    "version": "1.1.0",
+    "base_version": "1.0.0",
+    "type": "full",
+    "level": "normal",
+    "url": "http://192.168.88.100:8080/env_monitor",
+    "md5": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "size": 123456
+}

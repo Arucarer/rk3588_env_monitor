@@ -1,6 +1,6 @@
-CC ?= gcc
+CC := /home/aaa/rk3588_linux_sdk/buildroot/output/rockchip_atk_dlrk3588/host/bin/aarch64-buildroot-linux-gnu-gcc
 
-TARGET := env_monitorgit pull --ff-only origin main
+TARGET := env_monitor
 
 CFLAGS := -Wall -Wextra -std=c11
 INCLUDES := -Iinclude -Isensor -Idriver -Imodbus -Idatabase -Imqtt

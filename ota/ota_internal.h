@@ -27,12 +27,11 @@
 #define __OTA_INTERNAL_H__
 
 #include "ota_types.h"
-
+#include "ota_config.h"
 #include <stddef.h>
 
 /* 解析服务器version.json */
-int ota_internal_parse_version_file(const char *file_path,
-                                    ota_update_info_t *update_info);
+int ota_internal_parse_version_file(const char *file_path, ota_update_info_t *update_info);
 
 /* 获取本地当前版本 */
 int ota_internal_get_local_version(char *version, size_t size);
@@ -41,15 +40,13 @@ int ota_internal_get_local_version(char *version, size_t size);
 int ota_internal_save_local_version(const char *version);
 
 /* 比较两个版本号 */
-int ota_internal_compare_version(const char *current_version,
-                                 const char *new_version);
+int ota_internal_compare_version(const char *current_version, const char *new_version);
 
 /* 检查升级信息中的设备型号 */
 int ota_internal_check_device(const ota_update_info_t *update_info);
 
 /* 检查差分升级基础版本 */
-int ota_internal_check_base_version(const ota_update_info_t *update_info,
-                                    const char *current_version);
+int ota_internal_check_base_version(const ota_update_info_t *update_info, const char *current_version);
 
 /* 获取OTA升级锁 */
 int ota_internal_lock_acquire(void);
@@ -61,17 +58,13 @@ int ota_internal_lock_release(void);
 int ota_internal_check_duplicate_version(const char *version);
 
 /* 校验升级包文件大小 */
-int ota_internal_verify_file_size(const char *file_path,
-                                  size_t expected_size);
+int ota_internal_verify_file_size(const char *file_path, size_t expected_size);
 
 /* 校验升级包MD5 */
-int ota_internal_verify_md5(const char *file_path,
-                            const char *expected_md5);
+int ota_internal_verify_md5(const char *file_path, const char *expected_md5);
 
 /* 应用差分升级补丁 */
-int ota_internal_apply_patch(const char *old_file,
-                             const char *patch_file,
-                             const char *new_file);
+int ota_internal_apply_patch(const char *old_file, const char *patch_file, const char *new_file);
 
 /* 备份当前运行程序 */
 int ota_internal_backup_current(void);
