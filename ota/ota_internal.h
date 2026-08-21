@@ -26,9 +26,10 @@
 #ifndef __OTA_INTERNAL_H__
 #define __OTA_INTERNAL_H__
 
-#include "ota_types.h"
-#include "ota_config.h"
 #include <stddef.h>
+
+#include "ota_config.h"
+#include "ota_types.h"
 
 /* 解析服务器version.json */
 int ota_internal_parse_version_file(const char *file_path, ota_update_info_t *update_info);

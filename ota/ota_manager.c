@@ -160,15 +160,14 @@ void ota_manager_deinit(void)
 /* 下载version.json */
 static int ota_download_version_file(void)
 {
-    /* TODO:
-     * 调用：
-     *
-     * ota_http_download(
-     *     OTA_VERSION_URL,
-     *     OTA_VERSION_FILE
-     * );
-     */
-
+    int ret;
+    /*#1. 下载version.json*/
+    ret = ota_http_download(OTA_VERSION_URL, OTA_VERSION_FILE);
+    if (ret != 0) {
+        printf("下载 version.json失败\n");
+        return -1;
+    }
+    //#2. 下载成功
     return 0;
 }
 

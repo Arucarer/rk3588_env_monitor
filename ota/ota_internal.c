@@ -7,40 +7,149 @@
  * @version V1.0
  ******************************************************************************/
 
-#include "ota_internal.h"
-#include <openssl/evp.h>
+ #include "ota_internal.h"
 
-#include <stdio.h>
-#include <string.h>
+ #include <stdio.h>
+ #include <string.h>
+ #include <unistd.h>
+ #include <sys/stat.h>
+ 
+ #include <openssl/evp.h>
+ #include "cJSON.h"
 
 /* 解析服务器version.json */
 int ota_internal_parse_version_file(const char *file_path, ota_update_info_t *update_info)
 {
     FILE *fp;//这个是文件指针
+    char buffer[4096];//缓冲区，用于存储读取的文件内容
+    size_t len;
+
+    cJSON *root;
+    cJSON *item;
     /* #1.参数检查*/
     if (file_path == NULL || update_info == NULL) {
         return -1;
     }
+    memset(update_info, 0, sizeof(ota_update_info_t));
     /* #2.打开version.json */
     fp = fopen(file_path, "r");
     if (fp == NULL) {
         return -1;
     }
-    /* #3.读取version.json */
 
-    /* #4.解析version.json*/
-
-    /* #5.保存版本信息*/
-
+    /* #3. 读取version.json */
+    len = fread(buffer, 1, sizeof(buffer) - 1, fp);
     fclose(fp);
+
+    buffer[len] = '\0';
+
+
+    /* #4. 解析JSON */
+    root = cJSON_Parse(buffer);
+    if (root == NULL) {
+        printf("parse version.json failed\n");
+        return -1;
+    }
+    /* #5. 保存版本信息 */
+    item = cJSON_GetObjectItem(root, "device");
+    if (item != NULL) {
+        strncpy(update_info->device,
+                item->valuestring,
+                sizeof(update_info->device) - 1);
+    }
+
+
+    item = cJSON_GetObjectItem(root, "version");
+    if (item != NULL) {
+        strncpy(update_info->version,
+                item->valuestring,
+                sizeof(update_info->version) - 1);
+    }
+
+
+    item = cJSON_GetObjectItem(root, "base_version");
+    if (item != NULL) {
+        strncpy(update_info->base_version,
+                item->valuestring,
+                sizeof(update_info->base_version) - 1);
+    }
+
+
+    item = cJSON_GetObjectItem(root, "url");
+    if (item != NULL) {
+        strncpy(update_info->url,
+                item->valuestring,
+                sizeof(update_info->url) - 1);
+    }
+
+
+    item = cJSON_GetObjectItem(root, "md5");
+    if (item != NULL) {
+        strncpy(update_info->md5,
+                item->valuestring,
+                sizeof(update_info->md5) - 1);
+    }
+
+
+    item = cJSON_GetObjectItem(root, "size");
+    if (item != NULL) {
+        update_info->size = item->valueint;
+    }
+
+
+    item = cJSON_GetObjectItem(root, "type");
+    if (item != NULL)
+    {
+        if (strcmp(item->valuestring, "full") == 0) {
+            update_info->type = OTA_TYPE_FULL;
+        }
+        else if (strcmp(item->valuestring, "delta") == 0) {
+            update_info->type = OTA_TYPE_DELTA;
+        }
+    }
+
+
+    item = cJSON_GetObjectItem(root, "level");
+    if (item != NULL)
+    {
+        if (strcmp(item->valuestring, "normal") == 0) {
+            update_info->level = OTA_LEVEL_NORMAL;
+        }
+        else if (strcmp(item->valuestring, "force") == 0) {
+            update_info->level = OTA_LEVEL_FORCE;
+        }
+    }
+
+    cJSON_Delete(root);
     return 0;
 }
 
 /* 获取本地当前版本 */
 int ota_internal_get_local_version(char *version, size_t size)
 {
-    (void)version;
-    (void)size;
+    FILE *fp;
+    /* #1.参数检查 */
+    if (version == NULL || size == 0) {
+        return -1;
+    }
+    /* #2. 打开本地版本文件 */
+    fp = fopen(OTA_LOCAL_VERSION_FILE, "r");
+    if (fp == NULL) {
+        printf("open local version file failed: %s\n",
+               OTA_LOCAL_VERSION_FILE);
+        return -1;
+    }
+    /* #3. 读取版本号 */
+    if (fgets(version, size, fp) == NULL) {
+        printf("read local version failed\n");
+        fclose(fp);
+        return -1;
+    }
+    /* #4. 去除换行符 */
+    version[strcspn(version, "\n")] = '\0';
+
+    /* #5. 关闭文件 */
+    fclose(fp);
 
     return 0;
 }
@@ -88,14 +197,13 @@ int ota_internal_compare_version(const char *current_version, const char *new_ve
     /* #2. 解析当前版本 */
     if (sscanf(current_version, "%d.%d.%d", &cur_major, &cur_minor, &cur_patch) != 3) {
         printf("invalid current version: %s\n", current_version);
-        return 0;
+        return -1;
     }    
 
     /* #3. 解析服务器版本 */
-    if (sscanf(new_version, "%d.%d.%d",
-        &new_major, &new_minor, &new_patch) != 3) {
-    printf("invalid new version: %s\n", new_version);
-    return 0;
+    if (sscanf(new_version, "%d.%d.%d", &new_major, &new_minor, &new_patch) != 3) {
+        printf("invalid new version: %s\n", new_version);
+        return -1;
     }
 
     /* #4. 比较主版本号 */
@@ -180,9 +288,13 @@ int ota_internal_lock_acquire(void)
 /* 释放升级锁 */
 int ota_internal_lock_release(void)
 {
+    if (access(OTA_LOCK_FILE, F_OK) != 0) {
+        return 0;
+    }//检查锁文件是否存在，如果不存在直接返回0，表示锁已经释放
+
     /* #1. 删除OTA锁文件 */
     if (remove(OTA_LOCK_FILE) != 0) {
-        printf("remove OTA lock failed: %s\n", OTA_LOCK_FILE);
+        printf("remove OTA lock failed\n");
         return -1;
     }
 
@@ -190,9 +302,9 @@ int ota_internal_lock_release(void)
 }
 
 /* 防重复升级 */
-int ota_internal_check_duplicate_version(const char *version)
+int ota_internal_check_duplicate_version(const char *version)/*#TODO: 应该检查：failed_version */ 
 {
-    char current_version[OTA_VERSION_MAX_LEN];
+    char current_version[OTA_VERSION_MAX_LEN];//当前版本
     /* #1. 参数检查 */
     if (version == NULL || version[0] == '\0') {
         return -1;
@@ -219,10 +331,11 @@ int ota_internal_verify_file_size(const char *file_path, size_t expected_size)
         return -1;
     }
     /* #2. 获取本地文件信息 */
-    if (ota_internal_get_local_version(current_version, sizeof(current_version)) < 0) {
-        printf("get local version failed\n");
+    if (stat(file_path, &st) != 0) {
+        printf("get file size failed: %s\n", file_path);
         return -1;
     }
+
     /* #3. 比较文件大小 */  
     if ((size_t)st.st_size != expected_size){
         printf("file size mismatch: %s, expected=%zu, actual=%zu\n", file_path, expected_size, (size_t)st.st_size);
@@ -421,31 +534,21 @@ int ota_internal_install_new(const char *new_file)
         printf("new OTA program not found: %s\n", new_file);
         return -1;
     }
-
     /* #3. 设置新程序执行权限 */
     if (chmod(new_file, OTA_PROGRAM_MODE) != 0) {
         printf("set new OTA program permission failed: %s\n", new_file);
         return -1;
     }
-
-    /* #4. 删除当前旧程序 */
-    if (remove(OTA_CURRENT_PROGRAM) != 0) {
-        printf("remove current program failed: %s\n", OTA_CURRENT_PROGRAM);
-        return -1;
-    }
-
-    /* #5. 将新程序移动为正式程序 */
+    /* #4. 将新程序移动为正式程序 */
     if (rename(new_file, OTA_CURRENT_PROGRAM) != 0) {
         printf("install new OTA program failed\n");
         return -1;
     }
-
-    /* #6. 再次确保正式程序具有执行权限 */
+    /* #5. 再次确保正式程序具有执行权限 */
     if (chmod(OTA_CURRENT_PROGRAM, OTA_PROGRAM_MODE) != 0) {
         printf("set installed program permission failed\n");
         return -1;
     }
-
     return 0;
 }
 
@@ -482,13 +585,33 @@ int ota_internal_health_check(void)
 /* 提交升级 */
 int ota_internal_commit_upgrade(const char *version)
 {
-    /* TODO:
-     * 1. 保存新版本号
-     * 2. 标记OTA成功
-     * 3. 删除不再需要的备份
-     */
+    FILE *fp;
+    if (version == NULL) {
+        printf("OTA commit failed: version is null\n");
+        return -1;
+    }
+    if (ota_internal_save_local_version(version) != 0) {
+        printf("OTA commit failed: save local version failed\n");
+        return -1;
+    }
+    /* #3. 创建升级成功标记 */
+    fp = fopen(OTA_SUCCESS_FILE, "w");
+    if (fp == NULL) {
+        printf("create OTA success file failed: %s\n",
+               OTA_SUCCESS_FILE);
+        return -1;
+    }
 
-    (void)version;
+    fprintf(fp, "success:%s\n", version);
+
+    fclose(fp);
+
+    /* #4. 删除旧版本备份 */
+    if (access(OTA_BACKUP_FILE, F_OK) == 0) {
+        if (remove(OTA_BACKUP_FILE) != 0) {
+            printf("remove OTA backup failed: %s\n", OTA_BACKUP_FILE);
+        }
+    }
 
     return 0;
 }
