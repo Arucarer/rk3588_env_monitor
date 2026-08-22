@@ -17,12 +17,21 @@
  static int ota_http_progress_callback(void *clientp, curl_off_t dltotal, curl_off_t dlnow, curl_off_t ultotal, curl_off_t ulnow);
 
  static volatile int ota_http_cancel_flag = 0; // HTTP下载取消标志：0继续下载，1取消下载
- static size_t ota_downloaded_size = 0; // 当前已经下载的字节数
- static size_t ota_total_size = 0;      // 当前文件总字节数
+ static size_t ota_downloaded_size = 0;         // 当前已经下载的字节数
+ static size_t ota_total_size = 0;              // 当前文件总字节数
+ static int ota_last_percent = -1;              // 上一次打印的下载百分比
+ static int ota_http_initialized = 0; // HTTP模块初始化状态：0未初始化，1已初始化
 /* HTTP模块初始化 */
 int ota_http_init(void)
 {
     CURLcode res;
+
+    /* #1. 防止重复初始化 */
+    if (ota_http_initialized) {
+        printf("OTA HTTP already initialized\n");
+        return 0;
+    }
+
 
     /* #1. 初始化libcurl全局环境 */
     res = curl_global_init(CURL_GLOBAL_DEFAULT);
@@ -32,9 +41,11 @@ int ota_http_init(void)
     }
 
     /* #2. 初始化HTTP模块状态 */
-    ota_http_cancel_flag = 0; // 清除下载取消标志
-    ota_downloaded_size = 0;  // 清空当前已下载字节数
-    ota_total_size = 0;       // 清空当前文件总字节数
+    ota_http_cancel_flag = 0;
+    ota_downloaded_size = 0;
+    ota_total_size = 0;
+    ota_last_percent = -1;
+    ota_http_initialized = 1;
 
     printf("OTA HTTP init success\n");
     return 0;
@@ -47,7 +58,7 @@ int ota_http_download(const char *url, const char *save_path) //输入下载地�
     CURLcode res;
     FILE *fp = NULL;
     long http_code = 0;
-    int ret = 0;
+    curl_off_t local_size = 0; // 普通下载不存在断点，起始位置为0
     /* #1. 检查输入参数 */
     if (url == NULL || save_path == NULL) {
         printf("OTA HTTP invalid parameter\n");
@@ -73,15 +84,18 @@ int ota_http_download(const char *url, const char *save_path) //输入下载地�
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, fwrite);                     // 设置接收数据后的写入函数，使用fwrite写入文件
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);                             // 设置fwrite写入的目标文件指针
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);                        // 开启HTTP重定向，遇到301/302等状态码时自动跳转
-    curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 10L);                       // 设置连接服务器超时时间为10秒
-    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 300L);                             // 设置整个HTTP请求最大执行时间为300秒
+    curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, (long)OTA_HTTP_CONNECT_TIMEOUT);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, (long)OTA_HTTP_TIMEOUT);                           // 设置整个HTTP请求最大执行时间为300秒
     curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1L);                           // HTTP返回4xx/5xx错误码时，让curl_easy_perform返回失败
     curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
     curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, ota_http_progress_callback);
-    curl_easy_setopt(curl, CURLOPT_XFERINFODATA, NULL);
+    curl_easy_setopt(curl, CURLOPT_XFERINFODATA, &local_size);
 
     /* #5. 执行HTTP下载 */
-    ota_http_cancel_flag = 0; // 重置取消标志
+    ota_http_cancel_flag = 0;
+    ota_downloaded_size = 0;
+    ota_total_size = 0;
+    ota_last_percent = -1;
     res = curl_easy_perform(curl);
     if (res != CURLE_OK) {
         if (res == CURLE_ABORTED_BY_CALLBACK) {
@@ -90,8 +104,9 @@ int ota_http_download(const char *url, const char *save_path) //输入下载地�
             printf("OTA HTTP download failed: %s\n", curl_easy_strerror(res));
         }
     
-        curl_easy_cleanup(curl); // 释放CURL资源
-        fclose(fp);              // 关闭本地文件
+        curl_easy_cleanup(curl);
+        fclose(fp);
+        remove(save_path);
         return -1;
     }
     /* #6. 获取HTTP响应状态码 */
@@ -163,10 +178,9 @@ int ota_http_download_resume(const char *url, const char *save_path)//输入OTA�
     curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, (long)OTA_HTTP_CONNECT_TIMEOUT); // 设置服务器连接超时时间
     curl_easy_setopt(curl, CURLOPT_TIMEOUT, (long)OTA_HTTP_TIMEOUT);                // 设置整个HTTP请求最大执行时间
     curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1L);                               // HTTP 4xx/5xx时判定请求失败
-    curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
-    curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, ota_http_progress_callback);
-    curl_easy_setopt(curl, CURLOPT_XFERINFODATA, NULL);
-
+    curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);                               // 启用进度回调
+    curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, ota_http_progress_callback);   // 设置进度回调函数
+    curl_easy_setopt(curl, CURLOPT_XFERINFODATA, &local_size);                      // 将断点位置传给进度回调
     /* #6. 本地已有数据时，从断点位置继续下载 */
     if (local_size > 0) {
         curl_easy_setopt(curl, CURLOPT_RESUME_FROM_LARGE, local_size);              // 请求服务器从local_size字节处继续发送
@@ -174,7 +188,11 @@ int ota_http_download_resume(const char *url, const char *save_path)//输入OTA�
     }
 
     /* #7. 执行HTTP下载  先判断“网络传输是否成功”*/
-    ota_http_cancel_flag = 0; // 重置取消标志
+    ota_http_cancel_flag = 0;
+    ota_downloaded_size = 0;
+    ota_total_size = 0;
+    ota_last_percent = -1;
+
     res = curl_easy_perform(curl);
     if (res != CURLE_OK) {
         if (res == CURLE_ABORTED_BY_CALLBACK) {
@@ -290,8 +308,6 @@ int ota_http_get_remote_size(const char *url, size_t *file_size)
 /* 获取下载进度 */
 int ota_http_get_progress(size_t *downloaded_size, size_t *total_size)
 {
-
-
     /* #1. 检查输入参数 */
     if (downloaded_size == NULL || total_size == NULL) {
         printf("OTA HTTP get progress invalid parameter\n");
@@ -302,11 +318,10 @@ int ota_http_get_progress(size_t *downloaded_size, size_t *total_size)
     *total_size = ota_total_size;
     return 0;
 }
-
 /* 取消下载 */
 int ota_http_cancel(void)
 {
-    /* #1. 释放libcurl资源 */
+    /* #1. 设置HTTP下载取消标志 */
     ota_http_cancel_flag = 1; // 设置取消标志，后续下载操作应检查此标志并中止
     printf("OTA HTTP cancel\n");
     return 0;
@@ -315,7 +330,22 @@ int ota_http_cancel(void)
 /* HTTP模块释放 */
 void ota_http_deinit(void)
 {
-    /* TODO: 释放libcurl等资源 */
+    /* #1. 防止重复释放 */
+    if (!ota_http_initialized) {
+        printf("OTA HTTP not initialized\n");
+        return;
+    }
+    /* #2. 释放libcurl全局资源 */
+    curl_global_cleanup();
+
+    /* #3. 重置HTTP模块状态 */
+    ota_http_cancel_flag = 0; // 清除下载取消标志
+    ota_downloaded_size = 0;  // 清空当前已下载字节数
+    ota_total_size = 0;       // 清空当前文件总字节数
+    ota_last_percent = -1;    // 重置上一次打印的下载百分比
+    ota_http_initialized = 0;
+
+    printf("OTA HTTP deinit success\n");
 }
 
 /**
@@ -328,23 +358,43 @@ void ota_http_deinit(void)
  * @return 0: 成功
  * **/
 
-static int ota_http_progress_callback(void *clientp, curl_off_t dltotal, curl_off_t dlnow, curl_off_t ultotal, curl_off_t ulnow)
-{
-    (void)clientp;
-    (void)ultotal;
-    (void)ulnow;
+ static int ota_http_progress_callback(void *clientp, curl_off_t dltotal, curl_off_t dlnow, curl_off_t ultotal, curl_off_t ulnow)
+ {
+     curl_off_t local_size = 0;
+     curl_off_t downloaded = 0;
+     curl_off_t total = 0;
+     int percent = 0;
+ 
+     (void)ultotal;
+     (void)ulnow;
+ 
+     /* #1. 获取断点续传起始位置 */
+     if (clientp != NULL) local_size = *(curl_off_t *)clientp;
+ 
+     /* #2. 检查取消标志 */
+     if (ota_http_cancel_flag) {
+         printf("OTA HTTP download canceled\n");
+         return 1;
+     }
 
-    /* #1. 检查取消标志 */
-    if (ota_http_cancel_flag) {
-    printf("OTA HTTP download canceled\n");
-    return 1; // 返回非0，通知libcurl终止当前下载
-    }
+     /* #3. 计算整个文件的真实下载进度 */
+     downloaded = local_size + dlnow;
+     total = local_size + dltotal;
+     //dltotal表示本次还需要下载的总字节数 
 
-    /* #2. 更新下载进度 */
-    ota_downloaded_size = (size_t)dlnow;
-    ota_total_size = (size_t)dltotal;
-
-    printf("OTA HTTP download progress: %zu/%zu\n", ota_downloaded_size, ota_total_size);
-
-    return 0; // 返回0，继续下载
-}
+     ota_downloaded_size = (size_t)downloaded;//保存当前已下载字节数
+     ota_total_size = (size_t)total;//保存当前文件总字节数
+ 
+     /* #4. 总大小有效时计算百分比 */
+     if (total > 0) {
+         percent = (int)(downloaded * 100 / total);
+ 
+         /* #5. 只在百分比发生变化时打印 */
+         if (percent != ota_last_percent) {
+             printf("OTA HTTP download progress: %d%% (%zu/%zu bytes)\n", percent, ota_downloaded_size, ota_total_size);
+             ota_last_percent = percent;
+         }
+     }
+ 
+     return 0;
+ }

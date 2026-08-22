@@ -189,21 +189,22 @@ int ota_internal_compare_version(const char *current_version, const char *new_ve
 {
     int cur_major, cur_minor, cur_patch;
     int new_major, new_minor, new_patch;
-    
-    /* #1.参数检查 */
+
+    /* #1. 参数检查 */
     if (current_version == NULL || new_version == NULL) {
-        return -1;
+        return -2;
     }
+
     /* #2. 解析当前版本 */
     if (sscanf(current_version, "%d.%d.%d", &cur_major, &cur_minor, &cur_patch) != 3) {
         printf("invalid current version: %s\n", current_version);
-        return -1;
-    }    
+        return -2;
+    }
 
     /* #3. 解析服务器版本 */
     if (sscanf(new_version, "%d.%d.%d", &new_major, &new_minor, &new_patch) != 3) {
         printf("invalid new version: %s\n", new_version);
-        return -1;
+        return -2;
     }
 
     /* #4. 比较主版本号 */
@@ -586,30 +587,44 @@ int ota_internal_health_check(void)
 int ota_internal_commit_upgrade(const char *version)
 {
     FILE *fp;
-    if (version == NULL) {
-        printf("OTA commit failed: version is null\n");
+
+    /* #1. 参数检查 */
+    if (version == NULL || version[0] == '\0') {
+        printf("OTA commit failed: invalid version\n");
         return -1;
     }
-    if (ota_internal_save_local_version(version) != 0) {
-        printf("OTA commit failed: save local version failed\n");
-        return -1;
-    }
-    /* #3. 创建升级成功标记 */
+
+    /* #2. 创建升级成功标记 */
     fp = fopen(OTA_SUCCESS_FILE, "w");
     if (fp == NULL) {
-        printf("create OTA success file failed: %s\n",
-               OTA_SUCCESS_FILE);
+        printf("create OTA success file failed: %s\n", OTA_SUCCESS_FILE);
         return -1;
     }
 
-    fprintf(fp, "success:%s\n", version);
+    if (fprintf(fp, "success:%s\n", version) < 0) {
+        printf("write OTA success file failed\n");
+        fclose(fp);
+        remove(OTA_SUCCESS_FILE);
+        return -1;
+    }
 
-    fclose(fp);
+    if (fclose(fp) != 0) {
+        printf("close OTA success file failed\n");
+        remove(OTA_SUCCESS_FILE);
+        return -1;
+    }
 
-    /* #4. 删除旧版本备份 */
+    /* #3. 保存新的正式版本号 */
+    if (ota_internal_save_local_version(version) < 0) {
+        printf("OTA commit failed: save local version failed\n");
+        remove(OTA_SUCCESS_FILE);
+        return -1;
+    }
+
+    /* #4. 提交已经完成，删除旧版本备份 */
     if (access(OTA_BACKUP_FILE, F_OK) == 0) {
         if (remove(OTA_BACKUP_FILE) != 0) {
-            printf("remove OTA backup failed: %s\n", OTA_BACKUP_FILE);
+            printf("warning: remove OTA backup failed: %s\n", OTA_BACKUP_FILE);
         }
     }
 
